@@ -1,6 +1,5 @@
-const DEFAULT_PROXY_TARGET = 'https://cryptip-backend.vercel.app';
-const rawProxyTarget = process.env.API_PROXY_TARGET;
-const API_PROXY_TARGET = rawProxyTarget === undefined ? DEFAULT_PROXY_TARGET : rawProxyTarget;
+const rawProxyTarget = process.env.API_PROXY_TARGET ?? process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_PROXY_TARGET = rawProxyTarget ? rawProxyTarget.trim().replace(/\/$/, '') : '';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -8,7 +7,7 @@ const nextConfig = {
   experimental: { typedRoutes: true },
   async rewrites() {
     if (!API_PROXY_TARGET) return [];
-    const destinationBase = API_PROXY_TARGET.replace(/\/$/, '');
+    const destinationBase = API_PROXY_TARGET;
     return [
       {
         source: '/api/:path*',

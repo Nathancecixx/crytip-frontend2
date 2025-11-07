@@ -1,15 +1,14 @@
-export const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-// When an absolute API base is provided we only use it while rendering on the
-// server. In the browser we rely on the same-origin proxy defined in
-// next.config.mjs to avoid CORS errors.
+const RAW_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? '';
+export const API_BASE = RAW_API_BASE.replace(/\/$/, '');
 const API_BASE_IS_ABSOLUTE = /^https?:\/\//i.test(API_BASE);
 
 function withBase(path: string) {
   if (!path.startsWith('/')) throw new Error('API paths must start with "/"');
-  if (API_BASE_IS_ABSOLUTE && typeof window === 'undefined') {
-    return `${API_BASE}${path}`;
+  if (!API_BASE) return path;
+  if (API_BASE_IS_ABSOLUTE) {
+    return new URL(path, `${API_BASE}/`).toString();
   }
-  return path;
+  return `${API_BASE}${path}`;
 }
 
 export async function apiGet<T>(path: string, init: RequestInit = {}): Promise<T> {
