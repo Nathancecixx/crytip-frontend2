@@ -1,5 +1,6 @@
 'use client';
 
+import { Buffer } from 'buffer';
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { apiPost } from '@/lib/api';

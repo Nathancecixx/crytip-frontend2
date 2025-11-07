@@ -1,5 +1,6 @@
 'use client';
 
+import { Buffer } from 'buffer';
 import { clusterApiUrl, Connection, Transaction } from '@solana/web3.js';
 
 export function getRpcUrl() {
