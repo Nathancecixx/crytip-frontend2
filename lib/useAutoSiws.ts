@@ -17,19 +17,6 @@ export function useAutoSiws() {
     return !!adapter && typeof (adapter as { signIn?: unknown }).signIn === 'function';
   }
 
-  function normalizeSignature(signature: unknown): Uint8Array | string {
-    if (typeof signature === 'string') {
-      return signature;
-    }
-    if (signature instanceof Uint8Array) {
-      return signature;
-    }
-    if (signature instanceof ArrayBuffer) {
-      return new Uint8Array(signature);
-    }
-    throw new Error('Unsupported signature type from signMessage');
-  }
-
   useEffect(() => {
     if (!connected || !publicKey || !signMessage) return;
     if (running.current) return;
@@ -52,7 +39,6 @@ export function useAutoSiws() {
         const { message, nonce } = await siwsStart(address); // ← capture nonce
         const msgBytes = siwsMessageToBytes(message);
         const rawSignature = await signMessage(msgBytes);
-        const signature = normalizeSignature(rawSignature);
         console.debug('Auto SIWS breadcrumb', {
           stage: 'finish',
           sending: {
@@ -61,7 +47,7 @@ export function useAutoSiws() {
             messageLen: message.length,
           },
         });
-        await siwsFinish(address, message, signature, nonce);      // ← send nonce
+        await siwsFinish(address, message, rawSignature, nonce);      // ← send nonce
         requestEntitlementsRefresh();
       } catch (err) {
         console.error('Auto SIWS failed:', err);
