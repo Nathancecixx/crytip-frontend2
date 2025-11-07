@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiGet } from '@/lib/api';
+import { ApiError, apiGet } from '@/lib/api';
 
 type Entitlement = {
   type: 'license' | 'addon' | 'subscription';
@@ -14,14 +14,23 @@ type Entitlement = {
 export default function Dashboard() {
   const [ents, setEnts] = useState<Entitlement[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const data = await apiGet<{ entitlements: Entitlement[] }>('/api/me/entitlements');
         setEnts(data.entitlements || []);
-      } catch (e:any) {
-        setError(e.message);
+        setUnauthorized(false);
+        setError(null);
+      } catch (e: any) {
+        if (e instanceof ApiError && e.status === 401) {
+          setUnauthorized(true);
+          setEnts([]);
+          setError('Sign in with your wallet to view your entitlements.');
+          return;
+        }
+        setError(e?.message ?? 'Failed to load entitlements.');
       }
     })();
   }, []);
@@ -29,7 +38,11 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
-      {error && <div className="card p-4 text-red-300">{error}</div>}
+      {error && (
+        <div className={`card p-4 ${unauthorized ? 'text-amber-200' : 'text-red-300'}`}>
+          {error}
+        </div>
+      )}
       <div className="card p-6">
         <h2 className="font-semibold mb-3">Your Entitlements</h2>
         {ents.length === 0 && <div className="text-white/70">No entitlements yet.</div>}
