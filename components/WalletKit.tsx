@@ -21,7 +21,7 @@ export default function WalletKit({ children }: { children: ReactNode }) {
     process.env.NEXT_PUBLIC_SOLANA_RPC ||
     clusterApiUrl((process.env.NEXT_PUBLIC_SOLANA_CLUSTER as any) || 'mainnet-beta');
 
-  const standardWallets = useStandardWalletAdapters();
+  const standardWallets = useStandardWalletAdapters([]);
   const wallets = useMemo(() => [...standardWallets], [standardWallets]);
 
   if (!mounted) return null;
