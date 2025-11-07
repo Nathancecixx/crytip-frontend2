@@ -9,10 +9,6 @@ function hasBase64Encoder(): boolean {
   return typeof globalThis.btoa === 'function';
 }
 
-function hasBase64Decoder(): boolean {
-  return typeof globalThis.atob === 'function';
-}
-
 function bytesToBase64(bytes: Uint8Array): string {
   if (hasBase64Encoder()) {
     let binary = '';
@@ -25,6 +21,10 @@ function bytesToBase64(bytes: Uint8Array): string {
   }
 
   return Buffer.from(bytes).toString('base64');
+}
+
+function hasBase64Decoder(): boolean {
+  return typeof globalThis.atob === 'function';
 }
 
 function decodeBase64(value: string): Uint8Array {
@@ -71,11 +71,7 @@ export type SiwsStartResp = { message: string; nonce: string };
 export async function siwsStart(address: string): Promise<SiwsStartResp> {
   return apiPost<SiwsStartResp>(
     '/bff/auth/siws/start',
-    {
-      address,
-      wallet: address,
-      publicKey: address,
-    },
+    { address },
     { headers: { 'X-CSRF': '1' } }
   );
 }
@@ -83,19 +79,16 @@ export async function siwsStart(address: string): Promise<SiwsStartResp> {
 export async function siwsFinish(
   address: string,
   message: string,
-  signatureInput: SignatureInput,
-  nonce: string
+  signatureInput: SignatureInput
 ) {
-  const messageBytes = siwsMessageToBytes(message);
   const signatureBytes = signatureInputToBytes(signatureInput);
 
   await apiPost(
     '/bff/auth/siws/finish',
     {
       address,
-      message_b64: bytesToBase64(messageBytes),
-      signature_b64: bytesToBase64(signatureBytes),
-      nonce,
+      message,
+      signature: bytesToBase64(signatureBytes),
     },
     { headers: { 'X-CSRF': '1' } }
   );

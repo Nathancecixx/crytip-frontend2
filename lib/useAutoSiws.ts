@@ -36,18 +36,17 @@ export function useAutoSiws() {
           return;
         }
 
-        const { message, nonce } = await siwsStart(address); // ← capture nonce
+        const { message } = await siwsStart(address);
         const msgBytes = siwsMessageToBytes(message);
         const rawSignature = await signMessage(msgBytes);
         console.debug('Auto SIWS breadcrumb', {
           stage: 'finish',
           sending: {
             address,
-            hasNonce: !!nonce,
             messageLen: message.length,
           },
         });
-        await siwsFinish(address, message, rawSignature, nonce);      // ← send nonce
+        await siwsFinish(address, message, rawSignature);
         requestEntitlementsRefresh();
       } catch (err) {
         console.error('Auto SIWS failed:', err);
