@@ -1,10 +1,10 @@
 'use client';
 
-import { Buffer } from 'buffer';
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { siwsFinish, siwsStart } from '@/lib/siws';
+import { requestEntitlementsRefresh } from '@/lib/entitlements';
 
 export default function Login() {
   const { publicKey, signMessage, connected } = useWallet();
@@ -14,25 +14,20 @@ export default function Login() {
 
   async function start() {
     setError(null);
-    if (!publicKey) { setError('Connect Phantom in the top right first.'); return; }
+    if (!publicKey) { setError('Connect your wallet in the top right first.'); return; }
     if (!signMessage) { setError('Wallet does not support signMessage.'); return; }
     setLoading(true);
     try {
-      const { nonce, message } = await apiPost<{nonce:string,message:string}>(
-        '/api/auth/siws/start',
-        { wallet: publicKey.toBase58() }
-      );
+      const address = publicKey.toBase58();
+      const { message } = await siwsStart(address);
       const enc = new TextEncoder().encode(message);
       const sigBytes = await signMessage(enc);
-      const signature = Buffer.from(sigBytes).toString('base64');
-      await apiPost('/api/auth/siws/finish', {
-        wallet: publicKey.toBase58(),
-        signature,
-        message
-      });
+      await siwsFinish(address, message, sigBytes);
+      requestEntitlementsRefresh();
       router.push('/dashboard');
-    } catch (e:any) {
-      setError(e.message || 'Login failed');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e ?? '');
+      setError(message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -41,7 +36,7 @@ export default function Login() {
   return (
     <div className="card p-8 max-w-xl mx-auto">
       <h1 className="text-2xl font-semibold mb-4">Sign in with Solana</h1>
-      <p className="text-white/80 mb-4">Connect Phantom (top right), then sign a message to authenticate.</p>
+      <p className="text-white/80 mb-4">Connect your wallet (top right), then sign a message to authenticate.</p>
       {error && <div className="mb-3 text-red-300">{error}</div>}
       <button className="btn" onClick={start} disabled={loading || !connected}>
         {loading ? 'Signing...' : 'Sign In'}

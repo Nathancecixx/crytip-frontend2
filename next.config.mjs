@@ -3,12 +3,12 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: { typedRoutes: true },
   async rewrites() {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
-    if (!baseUrl) return [];
+    const bffOrigin = process.env.NEXT_PUBLIC_BFF_ORIGIN?.replace(/\/$/, '');
+    if (!bffOrigin) return [];
     return [
       {
-        source: '/api/:path*',
-        destination: `${baseUrl}/api/:path*`,
+        source: '/bff/:path*',
+        destination: `${bffOrigin}/:path*`,
       },
     ];
   },

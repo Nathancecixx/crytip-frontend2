@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ApiError, apiGet } from '@/lib/api';
+import { ENTITLEMENTS_REFRESH_EVENT } from '@/lib/entitlements';
 
 type Entitlement = {
   type: 'license' | 'addon' | 'subscription';
@@ -17,13 +18,17 @@ export default function DashboardClient() {
   const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    async function loadEntitlements() {
       try {
-        const data = await apiGet<{ entitlements: Entitlement[] }>('/api/me/entitlements');
+        const data = await apiGet<{ entitlements: Entitlement[] }>('/me/entitlements');
+        if (cancelled) return;
         setEnts(data.entitlements || []);
         setUnauthorized(false);
         setError(null);
       } catch (e: any) {
+        if (cancelled) return;
         if (e instanceof ApiError && e.status === 401) {
           setUnauthorized(true);
           setEnts([]);
@@ -32,7 +37,20 @@ export default function DashboardClient() {
         }
         setError(e?.message ?? 'Failed to load entitlements.');
       }
-    })();
+    }
+
+    loadEntitlements();
+
+    function handleRefresh() {
+      loadEntitlements();
+    }
+
+    window.addEventListener(ENTITLEMENTS_REFRESH_EVENT, handleRefresh);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(ENTITLEMENTS_REFRESH_EVENT, handleRefresh);
+    };
   }, []);
 
   return (
