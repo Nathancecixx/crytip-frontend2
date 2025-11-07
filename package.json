@@ -18,7 +18,8 @@
     "@solana/wallet-adapter-react-ui": "0.9.35",
     "@solana/wallet-adapter-wallets": "0.19.32",
     "clsx": "2.1.1",
-    "lucide-react": "0.454.0"
+    "lucide-react": "0.454.0",
+    "react-markdown": "9.0.3"
   },
   "devDependencies": {
     "autoprefixer": "10.4.20",
