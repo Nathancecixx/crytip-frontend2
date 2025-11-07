@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { apiGet, apiPost } from '@/lib/api';
+import { ApiError, apiGet, apiPost } from '@/lib/api';
 import { Section } from '@/components/Section';
+import { ENTITLEMENTS_REFRESH_EVENT } from '@/lib/entitlements';
 
 type PageConfig = {
   slug?: string | null;
@@ -29,17 +30,52 @@ export default function Editor() {
   });
   const [entitlements, setEntitlements] = useState<string[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    async function load() {
       try {
-        const me = await apiGet<any>('/api/me/entitlements');
-        const keys = (me.entitlements || []).map((e:any) => e.sku);
+        const me = await apiGet<any>('/me/entitlements');
+        if (cancelled) return;
+        const keys = (me.entitlements || []).map((e: any) => e.sku);
         setEntitlements(keys);
-        const page = await apiGet<any>('/api/pages/me'); // optional endpoint; ignore errors
+        setLoadError(null);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 401) {
+          setEntitlements([]);
+          setLoadError('Sign in with your wallet to load premium templates.');
+        } else {
+          const message = err instanceof Error ? err.message : String(err ?? '');
+          setLoadError(message || 'Failed to load entitlements.');
+        }
+      }
+
+      try {
+        const page = await apiGet<any>('/pages/me');
+        if (cancelled) return;
         if (page?.template_key) setCfg((c) => ({ ...c, ...page }));
-      } catch {}
-    })();
+      } catch (err: unknown) {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 401) return;
+        console.warn('Failed to load page config', err);
+      }
+    }
+
+    load();
+
+    function handleRefresh() {
+      load();
+    }
+
+    window.addEventListener(ENTITLEMENTS_REFRESH_EVENT, handleRefresh);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(ENTITLEMENTS_REFRESH_EVENT, handleRefresh);
+    };
   }, []);
 
   const hasPackA = entitlements.includes('templates.packA');
@@ -47,7 +83,7 @@ export default function Editor() {
   async function save() {
     setStatus('Saving...');
     try {
-      await apiPost('/api/pages', {
+      await apiPost('/pages', {
         slug: cfg.slug || null,
         template_key: cfg.template_key,
         theme_json: cfg.theme,
@@ -63,6 +99,8 @@ export default function Editor() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Page Editor</h1>
+
+      {loadError && <div className="card p-4 text-amber-200">{loadError}</div>}
 
       <Section title="Template">
         <div className="grid md:grid-cols-4 gap-3">

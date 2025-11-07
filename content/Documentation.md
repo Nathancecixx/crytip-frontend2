@@ -106,7 +106,7 @@ Scheduled (free): Vercel Cron (once/day) for reconciliation of failed mints & su
 * **Template Picker**: base + unlocked; live preview.
 * **Sections**: avatar, bio, links, media, gallery, tip widget, FAQ.
 * **Theme**: palette, font, spacing, background (image/video/shader). Add‑ons unlock effects.
-* **Gating**: `/api/me/entitlements` drives locks and purchase CTAs.
+* **Gating**: `/bff/me/entitlements` (same-origin proxy) drives locks and purchase CTAs.
 * **Publish**: saves JSON config; SSR composes deterministic HTML/CSS.
 
 ### 4.3 Error Handling & UX
@@ -124,15 +124,15 @@ Scheduled (free): Vercel Cron (once/day) for reconciliation of failed mints & su
 **Key endpoints**
 
 ```
-POST /api/auth/siws/start        → returns nonce + message
-POST /api/auth/siws/finish       → verify signature → set HttpOnly session cookie
-GET  /api/pages/:slug            → public page metadata
-POST /api/pages                  → create/update page (auth)
-GET  /api/me                     → profile + entitlements snapshot (auth)
-GET  /api/me/entitlements        → licenses/add‑ons/subscriptions (auth)
-POST /api/store/checkout         → create order, return x402 tx payload
-POST /api/store/webhook/x402     → HMAC verify → on‑chain confirm → mark paid → **mint now**
-GET  /api/health                 → { build, db, rpc }
+POST /bff/auth/siws/start        → returns nonce + message
+POST /bff/auth/siws/finish       → verify signature → set HttpOnly session cookie
+GET  /bff/pages/:slug            → public page metadata
+POST /bff/pages                  → create/update page (auth)
+GET  /bff/me                     → profile + entitlements snapshot (auth)
+GET  /bff/me/entitlements        → licenses/add‑ons/subscriptions (auth)
+POST /bff/store/checkout         → create order, return x402 tx payload
+POST /bff/store/webhook/x402     → HMAC verify → on‑chain confirm → mark paid → **mint now**
+GET  /bff/health                 → { build, db, rpc }
 ```
 
 **Responsibilities**
@@ -227,10 +227,10 @@ GET  /api/health                 → { build, db, rpc }
 ### 8.1 Flow
 
 1. User picks an SKU (e.g., `templates.packA`).
-2. Frontend calls `/api/store/checkout` with `{ sku }`.
+2. Frontend calls `/bff/store/checkout` with `{ sku }`.
 3. BFF validates SKU (allowlist), inserts `purchases(pending)` with `idempotency_key`, returns **x402 tx payload**.
 4. Phantom signs/sends USDC tx.
-5. x402 posts **webhook** → `/api/store/webhook/x402` with `{ order_id, sku, tx_sig, amount_atomic }` and headers `X-402-Signature`, `X-Idempotency-Key`.
+5. x402 posts **webhook** → `/bff/store/webhook/x402` with `{ order_id, sku, tx_sig, amount_atomic }` and headers `X-402-Signature`, `X-Idempotency-Key`.
 6. BFF verifies HMAC + confirms tx on chain with `finalized` commitment; sets purchase → **paid** and **mints immediately**. On mint error → set `paid-pending-mint` for daily retry.
 
 ### 8.2 SKUs (MVP)
@@ -281,7 +281,7 @@ GET  /api/health                 → { build, db, rpc }
 
 ### 11.1 Checkout
 
-**POST** `/api/store/checkout`
+**POST** `/bff/store/checkout`
 
 ```json
 { "sku": "templates.packA" }
@@ -298,7 +298,7 @@ GET  /api/health                 → { build, db, rpc }
 
 ### 11.2 Webhook (x402)
 
-**POST** `/api/store/webhook/x402`
+**POST** `/bff/store/webhook/x402`
 
 * **Headers**: `X-402-Signature`, `X-Idempotency-Key`
 

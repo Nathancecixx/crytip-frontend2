@@ -1,5 +1,15 @@
+const BFF_PREFIX = '/bff';
+
+function normalizeApiPath(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  if (path.startsWith(BFF_PREFIX)) return path;
+  if (path.startsWith('/')) return `${BFF_PREFIX}${path}`;
+  return `${BFF_PREFIX}/${path}`;
+}
+
 export function api(path: string, init: RequestInit = {}) {
-  return fetch(path, { ...init, credentials: 'include' });
+  const url = normalizeApiPath(path);
+  return fetch(url, { ...init, credentials: 'include' });
 }
 
 export class ApiError extends Error {
@@ -34,7 +44,8 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     if (!init.method) init.method = 'POST';
   }
 
-  const response = await api(path, init);
+  const target = normalizeApiPath(path);
+  const response = await fetch(target, { ...init, credentials: 'include' });
   const contentType = response.headers.get('content-type') || '';
   const isJson = contentType.toLowerCase().includes('application/json');
   const raw = response.status === 204 ? '' : await response.text();
@@ -58,7 +69,11 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
       : parsed
         ? JSON.stringify(parsed)
         : raw;
-    const message = `API ${init.method ?? 'GET'} ${path} ${response.status}` + (summary ? `: ${summary}` : '');
+    const method = init.method ?? 'GET';
+    const baseMessage = response.status === 401
+      ? `Authentication required (401) for ${method} ${target}`
+      : `API ${method} ${target} ${response.status}`;
+    const message = baseMessage + (summary ? `: ${summary}` : '');
     throw new ApiError(message, response.status, parsed ?? raw);
   }
 
