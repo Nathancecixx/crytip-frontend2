@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
-import { siwsStart, siwsFinish } from '@/lib/siws';
+import { siwsStart, siwsFinish, siwsMessageToBytes } from '@/lib/siws';
 import { requestEntitlementsRefresh } from '@/lib/entitlements';
 
 export default function LoginPage() {
@@ -27,7 +27,7 @@ export default function LoginPage() {
       const { message, nonce } = await siwsStart(address);
 
       // 2) Sign the message
-      const enc = new TextEncoder().encode(message);
+      const enc = siwsMessageToBytes(message);
       const sigBytes = await signMessage(enc);
 
       // 3) Finish SIWS (IMPORTANT: include nonce)
