@@ -21,21 +21,20 @@ export function useAutoSiws() {
 
     (async () => {
       try {
-        // Prefer Wallet Standard signIn if available; else signMessage flow.
+        // Prefer Wallet Standard signIn if the adapter ever exposes it.
         // @ts-expect-error signIn may exist on some adapters
         if (wallet?.adapter?.signIn) {
-          // If adopting wallet-native signIn in the future, call it here and forward to backend as needed.
-          // For now, fall back to signMessage below for compatibility.
+          // Not used right now; fall back to signMessage flow below.
         }
-        const { message } = await siwsStart(address);
+
+        const { message, nonce } = await siwsStart(address); // ← capture nonce
         const msgBytes = new TextEncoder().encode(message);
         const sig = await signMessage(msgBytes);
-        await siwsFinish(address, message, sig);
+        await siwsFinish(address, message, sig, nonce);      // ← send nonce
         requestEntitlementsRefresh();
       } catch (err) {
         console.error('Auto SIWS failed:', err);
         lastAddress.current = null;
-        // Optional: navigate to /login as manual fallback
       } finally {
         running.current = false;
       }
