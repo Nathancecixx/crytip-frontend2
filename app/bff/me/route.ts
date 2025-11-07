@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     return createJsonResponse({ error: 'unauthenticated' }, { status: 401 });
   }
 
-  const url = buildBackendUrl(req, ['me', 'entitlements']);
+  const url = buildBackendUrl(req, ['me']);
   const headers = new Headers();
   headers.set('Accept', 'application/json');
   headers.set('Cookie', `${SESSION_COOKIE_NAME}=${sessionCookie}`);

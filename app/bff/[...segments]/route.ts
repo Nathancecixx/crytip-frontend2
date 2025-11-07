@@ -4,6 +4,7 @@ import { proxyApiRequest } from '@/lib/server/bffProxy';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 async function handler(req: NextRequest, { params }: { params: { segments?: string[] } }) {
   const segments = params.segments ?? [];

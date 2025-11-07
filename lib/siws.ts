@@ -15,11 +15,15 @@ export type SiwsStartResp = { message: string; nonce: string };
 
 export async function siwsStart(address: string): Promise<SiwsStartResp> {
   // Some backends accept both `address` and `wallet`; sending both is harmless.
-  return apiPost<SiwsStartResp>('/api/auth/siws/start', {
-    address,
-    wallet: address,
-    publicKey: address,
-  });
+  return apiPost<SiwsStartResp>(
+    '/api/auth/siws/start',
+    {
+      address,
+      wallet: address,
+      publicKey: address,
+    },
+    { headers: { 'X-CSRF': '1' } }
+  );
 }
 
 type SignatureInput = Uint8Array | ArrayBuffer | string;
@@ -41,18 +45,22 @@ export async function siwsFinish(
 ) {
   const signature = normalizeSignatureInput(signatureInput);
   // IMPORTANT: include nonce
-  await apiPost('/api/auth/siws/finish', {
-    address,
-    wallet: address,
-    publicKey: address,
-    message,
-    signature,
-    nonce,
-  });
+  await apiPost(
+    '/api/auth/siws/finish',
+    {
+      address,
+      wallet: address,
+      publicKey: address,
+      message,
+      signature,
+      nonce,
+    },
+    { headers: { 'X-CSRF': '1' } }
+  );
 }
 
 export async function apiLogout() {
-  await apiPost('/api/auth/logout', {}).catch(() => {});
+  await apiPost('/api/auth/logout', {}, { headers: { 'X-CSRF': '1' } }).catch(() => {});
 }
 
 export const siwsMessageToBytes = encodeMessage;
