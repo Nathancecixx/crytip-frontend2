@@ -26,12 +26,12 @@ export default function LoginPage() {
       // 1) Start SIWS → receive message + nonce
       const { message, nonce } = await siwsStart(address);
 
-      // 2) Sign the message
-      const enc = siwsMessageToBytes(message);
-      const sigBytes = await signMessage(enc);
+      // 2) Sign the message exactly as returned
+      const msgBytes = siwsMessageToBytes(message);
+      const signature = await signMessage(msgBytes);
 
       // 3) Finish SIWS (IMPORTANT: include nonce)
-      await siwsFinish(address, message, sigBytes, nonce);
+      await siwsFinish(address, message, signature, nonce);
 
       // 4) Refresh entitlements and go to dashboard
       requestEntitlementsRefresh();

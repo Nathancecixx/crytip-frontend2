@@ -22,7 +22,17 @@ export default function WalletKit({ children }: { children: ReactNode }) {
     clusterApiUrl((process.env.NEXT_PUBLIC_SOLANA_CLUSTER as any) || 'mainnet-beta');
 
   const standardWallets = useStandardWalletAdapters([]);
-  const wallets = useMemo(() => [...standardWallets], [standardWallets]);
+  const wallets = useMemo(() => {
+    const seen = new Set<string>();
+    return standardWallets.filter((adapter) => {
+      const key = adapter.name;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }, [standardWallets]);
 
   if (!mounted) return null;
 

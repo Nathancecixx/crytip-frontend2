@@ -5,8 +5,8 @@ import {
   cloneRequestBody,
   cloneRequestHeaders,
   cloneResponseHeaders,
+  createJsonResponse,
   ensureCsrfHeader,
-  rebindSessionCookies,
 } from '@/lib/server/bffProxy';
 
 export const runtime = 'nodejs';
@@ -43,15 +43,42 @@ export async function POST(req: NextRequest) {
   });
 
   const responseHeaders = cloneResponseHeaders(backendResponse);
-  const sessionCookies = rebindSessionCookies(backendResponse.headers);
-  for (const cookie of sessionCookies) {
-    responseHeaders.append('Set-Cookie', cookie);
-  }
   applyBffResponseHeaders(responseHeaders);
 
-  return new Response(backendResponse.body, {
-    status: backendResponse.status,
-    statusText: backendResponse.statusText,
-    headers: responseHeaders,
-  });
+  if (!backendResponse.ok) {
+    const errorBody = await backendResponse.text();
+    return new Response(errorBody, {
+      status: backendResponse.status,
+      statusText: backendResponse.statusText,
+      headers: responseHeaders,
+    });
+  }
+
+  let payload: unknown;
+  try {
+    payload = await backendResponse.json();
+  } catch {
+    return createJsonResponse(
+      { error: 'invalid_backend_response' },
+      { status: 502 }
+    );
+  }
+
+  const message =
+    payload && typeof payload === 'object' && 'message' in payload
+      ? (payload as Record<string, unknown>).message
+      : undefined;
+  const nonce =
+    payload && typeof payload === 'object' && 'nonce' in payload
+      ? (payload as Record<string, unknown>).nonce
+      : undefined;
+
+  if (typeof message !== 'string' || typeof nonce !== 'string') {
+    return createJsonResponse(
+      { error: 'invalid_backend_response' },
+      { status: 502 }
+    );
+  }
+
+  return createJsonResponse({ message, nonce });
 }
