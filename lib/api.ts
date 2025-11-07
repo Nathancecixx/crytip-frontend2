@@ -1,9 +1,11 @@
 const RAW_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? '';
 export const API_BASE = RAW_API_BASE.replace(/\/$/, '');
 const API_BASE_IS_ABSOLUTE = /^https?:\/\//i.test(API_BASE);
+const IS_BROWSER = typeof window !== 'undefined';
 
 function withBase(path: string) {
   if (!path.startsWith('/')) throw new Error('API paths must start with "/"');
+  if (IS_BROWSER) return path;
   if (!API_BASE) return path;
   if (API_BASE_IS_ABSOLUTE) {
     return new URL(path, `${API_BASE}/`).toString();

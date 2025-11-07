@@ -1,62 +1,7 @@
-'use client';
+import dynamic from 'next/dynamic';
 
-import { useEffect, useState } from 'react';
-import { ApiError, apiGet } from '@/lib/api';
+const DashboardClient = dynamic(() => import('./DashboardClient'), { ssr: false });
 
-type Entitlement = {
-  type: 'license' | 'addon' | 'subscription';
-  sku: string;
-  status: string;
-  expires_at?: string | null;
-  ref_mint?: string | null;
-};
-
-export default function Dashboard() {
-  const [ents, setEnts] = useState<Entitlement[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [unauthorized, setUnauthorized] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await apiGet<{ entitlements: Entitlement[] }>('/api/me/entitlements');
-        setEnts(data.entitlements || []);
-        setUnauthorized(false);
-        setError(null);
-      } catch (e: any) {
-        if (e instanceof ApiError && e.status === 401) {
-          setUnauthorized(true);
-          setEnts([]);
-          setError('Sign in with your wallet to view your entitlements.');
-          return;
-        }
-        setError(e?.message ?? 'Failed to load entitlements.');
-      }
-    })();
-  }, []);
-
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
-      {error && (
-        <div className={`card p-4 ${unauthorized ? 'text-amber-200' : 'text-red-300'}`}>
-          {error}
-        </div>
-      )}
-      <div className="card p-6">
-        <h2 className="font-semibold mb-3">Your Entitlements</h2>
-        {ents.length === 0 && <div className="text-white/70">No entitlements yet.</div>}
-        <ul className="space-y-2">
-          {ents.map((e, i) => (
-            <li key={i} className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-2">
-              <span>{e.type} — {e.sku}</span>
-              <span className="text-white/60 text-sm">
-                {e.status}{e.expires_at ? ` (expires ${new Date(e.expires_at).toLocaleDateString()})` : ''}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
+export default function DashboardPage() {
+  return <DashboardClient />;
 }
