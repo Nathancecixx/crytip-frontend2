@@ -22,13 +22,24 @@ export async function siwsStart(address: string): Promise<SiwsStartResp> {
   });
 }
 
+type SignatureInput = Uint8Array | ArrayBuffer | string;
+
+function normalizeSignatureInput(signature: SignatureInput): string {
+  if (typeof signature === 'string') {
+    return signature;
+  }
+
+  const bytes = signature instanceof Uint8Array ? signature : new Uint8Array(signature);
+  return bs58.encode(bytes);
+}
+
 export async function siwsFinish(
   address: string,
   message: string,
-  signatureBytes: Uint8Array,
+  signatureInput: SignatureInput,
   nonce: string
 ) {
-  const signature = bs58.encode(signatureBytes);
+  const signature = normalizeSignatureInput(signatureInput);
   // IMPORTANT: include nonce
   await apiPost('/api/auth/siws/finish', {
     address,
