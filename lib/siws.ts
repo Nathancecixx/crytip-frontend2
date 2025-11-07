@@ -1,16 +1,11 @@
 import bs58 from 'bs58';
-import { ApiError, apiPost } from './api';
+import { ApiError, apiPost, API_BASE_URL } from './api';
 
 const textEncoder = new TextEncoder();
 
-const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
-
 function requireBackendUrl(path: string): string {
-  if (!BACKEND_API_BASE_URL) {
-    throw new Error('NEXT_PUBLIC_API_BASE_URL is not set');
-  }
   const suffix = path.startsWith('/') ? path : `/${path}`;
-  return `${BACKEND_API_BASE_URL}${suffix}`;
+  return `${API_BASE_URL}${suffix}`;
 }
 
 function requireFrontendHost(): string {
