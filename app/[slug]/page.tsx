@@ -1,5 +1,7 @@
+import { api } from '@/lib/api';
+
 async function getPage(slug: string) {
-  const res = await fetch(`/api/pages/${slug}`, { cache: 'no-store', credentials: 'include' });
+  const res = await api(`/api/pages/${slug}`, { cache: 'no-store' });
   if (!res.ok) return null;
   return res.json();
 }

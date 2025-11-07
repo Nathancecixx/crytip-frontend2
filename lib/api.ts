@@ -1,16 +1,5 @@
-const RAW_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? '';
-export const API_BASE = RAW_API_BASE.replace(/\/$/, '');
-const API_BASE_IS_ABSOLUTE = /^https?:\/\//i.test(API_BASE);
-const IS_BROWSER = typeof window !== 'undefined';
-
-function withBase(path: string) {
-  if (!path.startsWith('/')) throw new Error('API paths must start with "/"');
-  if (IS_BROWSER) return path;
-  if (!API_BASE) return path;
-  if (API_BASE_IS_ABSOLUTE) {
-    return new URL(path, `${API_BASE}/`).toString();
-  }
-  return `${API_BASE}${path}`;
+export function api(path: string, init: RequestInit = {}) {
+  return fetch(path, { ...init, credentials: 'include' });
 }
 
 export class ApiError extends Error {
@@ -38,7 +27,6 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const init: RequestInit = {
     ...rest,
     headers,
-    credentials: 'include',
   };
 
   if (json !== undefined) {
@@ -46,7 +34,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     if (!init.method) init.method = 'POST';
   }
 
-  const response = await fetch(withBase(path), init);
+  const response = await api(path, init);
   const contentType = response.headers.get('content-type') || '';
   const isJson = contentType.toLowerCase().includes('application/json');
   const raw = response.status === 204 ? '' : await response.text();
