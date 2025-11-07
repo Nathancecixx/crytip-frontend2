@@ -7,7 +7,7 @@ import type { Adapter } from '@solana/wallet-adapter-base';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import { getRpcUrl } from '@/lib/solana';
 
-const WalletKit: FC<PropsWithChildren> = ({ children }) => {
+const SolanaWalletProvider: FC<PropsWithChildren> = ({ children }) => {
   const endpoint = useMemo(() => getRpcUrl(), []);
   // Phantom now ships as a Wallet Standard implementation, so we do not need to
   // register a dedicated adapter – the wallet standard hook will expose it.
@@ -22,4 +22,4 @@ const WalletKit: FC<PropsWithChildren> = ({ children }) => {
   );
 };
 
-export default WalletKit;
+export default SolanaWalletProvider;
