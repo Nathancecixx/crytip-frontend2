@@ -1,7 +1,5 @@
-import { API_BASE } from '@/lib/api';
-
 async function getPage(slug: string) {
-  const res = await fetch(`${API_BASE.replace(/\/$/,'')}/api/pages/${slug}`, { cache: 'no-store' });
+  const res = await fetch(`/api/pages/${slug}`, { cache: 'no-store', credentials: 'include' });
   if (!res.ok) return null;
   return res.json();
 }
@@ -23,7 +21,7 @@ export default async function TipPage({ params }: { params: { slug: string } }) 
         {cfg.bio && <p className="text-white/80">{cfg.bio}</p>}
       </div>
       <div className="grid gap-3">
-        {(cfg.links||[]).map((l:any, i:number) => (
+        {(cfg.links || []).map((l: any, i: number) => (
           <a key={i} href={l.url} className="card p-4 hover:bg-white/10" target="_blank" rel="noreferrer">
             {l.label || l.url}
           </a>
