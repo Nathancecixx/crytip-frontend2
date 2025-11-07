@@ -1,7 +1,45 @@
 import bs58 from 'bs58';
-import { apiPost } from './api';
+import { ApiError, apiPost } from './api';
 
 const textEncoder = new TextEncoder();
+
+const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
+
+function requireBackendUrl(path: string): string {
+  if (!BACKEND_API_BASE_URL) {
+    throw new Error('NEXT_PUBLIC_API_BASE_URL is not set');
+  }
+  const suffix = path.startsWith('/') ? path : `/${path}`;
+  return `${BACKEND_API_BASE_URL}${suffix}`;
+}
+
+function requireFrontendHost(): string {
+  if (typeof window === 'undefined' || !window.location?.host) {
+    throw new Error('SIWS requires a browser environment with window.location.host');
+  }
+  return window.location.host;
+}
+
+function ensureMessageDomain(message: string, domain: string): string {
+  let updated = message;
+
+  const wantsYouToSignIn = /^[^\n\r]+ wants you to sign in with your Solana account:/;
+  if (wantsYouToSignIn.test(updated)) {
+    updated = updated.replace(wantsYouToSignIn, `${domain} wants you to sign in with your Solana account:`);
+  }
+
+  const domainLine = /^(domain|Domain):\s*.*$/m;
+  if (domainLine.test(updated)) {
+    updated = updated.replace(domainLine, (_substring: string, captured: string) => `${captured}: ${domain}`);
+  }
+
+  const jsonDomain = /("domain"\s*:\s*")[^"]*(")/i;
+  if (jsonDomain.test(updated)) {
+    updated = updated.replace(jsonDomain, `$1${domain}$2`);
+  }
+
+  return updated;
+}
 
 type SignatureInput = Uint8Array | ArrayBuffer | string;
 
@@ -69,11 +107,28 @@ export function siwsMessageToBytes(message: string): Uint8Array {
 export type SiwsStartResp = { message: string; nonce: string };
 
 export async function siwsStart(address: string): Promise<SiwsStartResp> {
-  return apiPost<SiwsStartResp>(
-    '/bff/auth/siws/start',
-    { address },
+  const domain = requireFrontendHost();
+  const startUrl = requireBackendUrl('/api/auth/siws/start');
+
+  const response = await apiPost<SiwsStartResp>(
+    startUrl,
+    { address, domain },
     { headers: { 'X-CSRF': '1' } }
-  );
+  ).catch((err) => {
+    if (err instanceof ApiError) {
+      throw err;
+    }
+    throw new ApiError('Failed to start SIWS', 500, err);
+  });
+
+  if (!response?.message) {
+    return response;
+  }
+
+  return {
+    ...response,
+    message: ensureMessageDomain(response.message, domain),
+  };
 }
 
 export async function siwsFinish(
@@ -83,8 +138,10 @@ export async function siwsFinish(
 ) {
   const signatureBytes = signatureInputToBytes(signatureInput);
 
+  const finishUrl = requireBackendUrl('/api/auth/siws/finish');
+
   await apiPost(
-    '/bff/auth/siws/finish',
+    finishUrl,
     {
       address,
       message,

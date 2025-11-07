@@ -52,7 +52,7 @@ export default function Editor() {
     async function load() {
       let meData: MeResponse;
       try {
-        meData = await apiGet<MeResponse>('/bff/me');
+        meData = await apiGet<MeResponse>('/api/me');
         if (cancelled) return;
         setMe(meData);
         setAuthPrompt(null);
@@ -73,7 +73,7 @@ export default function Editor() {
       }
 
       try {
-        const ent = await apiGet<{ entitlements: { sku: string }[] }>('/bff/me/entitlements');
+        const ent = await apiGet<{ entitlements: { sku: string }[] }>('/api/me/entitlements');
         if (cancelled) return;
         const keys = (ent.entitlements || []).map((e) => e.sku);
         setEntitlements(keys);
