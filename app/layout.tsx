@@ -1,7 +1,9 @@
+// app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css';
-import WalletKit from '@/components/WalletKit';
+
 import NavBar from '@/components/NavBar';
+import SolanaProviders from './_providers/SolanaProviders';
 
 export const metadata: Metadata = {
   title: 'Crypto Tip Jar',
@@ -10,12 +12,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <WalletKit>
+        <SolanaProviders>
           <NavBar />
-          <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">{children}</main>
-        </WalletKit>
+          <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+            {children}
+          </main>
+        </SolanaProviders>
       </body>
     </html>
   );
