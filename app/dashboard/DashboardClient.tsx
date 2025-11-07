@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ApiError, apiGet } from '@/lib/api';
 import { ENTITLEMENTS_REFRESH_EVENT } from '@/lib/entitlements';
@@ -57,8 +58,16 @@ export default function DashboardClient() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
       {error && (
-        <div className={`card p-4 ${unauthorized ? 'text-amber-200' : 'text-red-300'}`}>
-          {error}
+        <div className={`card p-4 space-y-3 ${unauthorized ? 'text-amber-200' : 'text-red-300'}`}>
+          <div>{error}</div>
+          {unauthorized && (
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+            >
+              Sign in with wallet
+            </Link>
+          )}
         </div>
       )}
       <div className="card p-6">

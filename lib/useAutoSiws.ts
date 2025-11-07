@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { siwsStart, siwsFinish, apiLogout } from './siws';
+import { siwsStart, siwsFinish, apiLogout, siwsMessageToBytes } from './siws';
 import { requestEntitlementsRefresh } from './entitlements';
 
 export function useAutoSiws() {
@@ -28,7 +28,7 @@ export function useAutoSiws() {
         }
 
         const { message, nonce } = await siwsStart(address); // ← capture nonce
-        const msgBytes = new TextEncoder().encode(message);
+        const msgBytes = siwsMessageToBytes(message);
         const sig = await signMessage(msgBytes);
         await siwsFinish(address, message, sig, nonce);      // ← send nonce
         requestEntitlementsRefresh();
