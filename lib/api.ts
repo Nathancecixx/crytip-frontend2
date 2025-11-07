@@ -1,11 +1,27 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
 
+function isBrowser() {
+  return typeof window !== 'undefined';
+}
+
 function normalizeApiPath(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
+  const suffix = path.startsWith('/') ? path : `/${path}`;
+
+  if (suffix.startsWith('/bff/')) {
+    return suffix;
+  }
+
+  if (isBrowser()) {
+    if (suffix.startsWith('/api/')) {
+      return `/bff${suffix.slice(4)}`;
+    }
+    return suffix;
+  }
+
   if (!API_BASE_URL) {
     throw new Error('NEXT_PUBLIC_API_BASE_URL is not set');
   }
-  const suffix = path.startsWith('/') ? path : `/${path}`;
   return `${API_BASE_URL}${suffix}`;
 }
 
