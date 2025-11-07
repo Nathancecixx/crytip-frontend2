@@ -3,12 +3,32 @@
 import { useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { siwsStart, siwsFinish, apiLogout, siwsMessageToBytes } from './siws';
+import type { Adapter } from '@solana/wallet-adapter-base';
 import { requestEntitlementsRefresh } from './entitlements';
 
 export function useAutoSiws() {
   const { connected, publicKey, signMessage, wallet } = useWallet();
   const lastAddress = useRef<string | null>(null);
   const running = useRef(false);
+
+  function adapterHasSignIn(
+    adapter: Adapter | null | undefined
+  ): adapter is Adapter & { signIn: () => Promise<void> } {
+    return !!adapter && typeof (adapter as { signIn?: unknown }).signIn === 'function';
+  }
+
+  function normalizeSignature(signature: unknown): Uint8Array | string {
+    if (typeof signature === 'string') {
+      return signature;
+    }
+    if (signature instanceof Uint8Array) {
+      return signature;
+    }
+    if (signature instanceof ArrayBuffer) {
+      return new Uint8Array(signature);
+    }
+    throw new Error('Unsupported signature type from signMessage');
+  }
 
   useEffect(() => {
     if (!connected || !publicKey || !signMessage) return;
@@ -22,15 +42,26 @@ export function useAutoSiws() {
     (async () => {
       try {
         // Prefer Wallet Standard signIn if the adapter ever exposes it.
-        // @ts-expect-error signIn may exist on some adapters
-        if (wallet?.adapter?.signIn) {
-          // Not used right now; fall back to signMessage flow below.
+        const adapter = wallet?.adapter ?? null;
+        if (adapterHasSignIn(adapter)) {
+          await adapter.signIn();
+          requestEntitlementsRefresh();
+          return;
         }
 
         const { message, nonce } = await siwsStart(address); // ← capture nonce
         const msgBytes = siwsMessageToBytes(message);
-        const sig = await signMessage(msgBytes);
-        await siwsFinish(address, message, sig, nonce);      // ← send nonce
+        const rawSignature = await signMessage(msgBytes);
+        const signature = normalizeSignature(rawSignature);
+        console.debug('Auto SIWS breadcrumb', {
+          stage: 'finish',
+          sending: {
+            address,
+            hasNonce: !!nonce,
+            messageLen: message.length,
+          },
+        });
+        await siwsFinish(address, message, signature, nonce);      // ← send nonce
         requestEntitlementsRefresh();
       } catch (err) {
         console.error('Auto SIWS failed:', err);
