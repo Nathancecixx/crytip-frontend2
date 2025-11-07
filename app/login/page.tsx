@@ -23,15 +23,15 @@ export default function LoginPage() {
 
       const address = publicKey.toBase58();
 
-      // 1) Start SIWS → receive message + nonce
-      const { message, nonce } = await siwsStart(address);
+      // 1) Start SIWS → receive challenge message (nonce embedded)
+      const { message } = await siwsStart(address);
 
       // 2) Sign the message exactly as returned
       const msgBytes = siwsMessageToBytes(message);
       const signature = await signMessage(msgBytes);
 
-      // 3) Finish SIWS (IMPORTANT: include nonce)
-      await siwsFinish(address, message, signature, nonce);
+      // 3) Finish SIWS with the original message + signature
+      await siwsFinish(address, message, signature);
 
       // 4) Refresh entitlements and go to dashboard
       requestEntitlementsRefresh();
