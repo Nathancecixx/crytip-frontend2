@@ -46,7 +46,7 @@ export type ApiFetchOptions = RequestInit & { json?: unknown };
 
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { json, headers: initHeaders, ...rest } = options;
-  const headers = new Headers(initHeaders || undefined);
+  const headers = new Headers(initHeaders ?? undefined);
   if (!headers.has('Accept')) headers.set('Accept', 'application/json');
   if (json !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
