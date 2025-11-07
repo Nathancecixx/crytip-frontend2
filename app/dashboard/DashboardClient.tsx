@@ -23,7 +23,7 @@ export default function DashboardClient() {
 
     async function loadEntitlements() {
       try {
-        const data = await apiGet<{ entitlements: Entitlement[] }>('/api/me/entitlements');
+        const data = await apiGet<{ entitlements: Entitlement[] }>('/bff/me/entitlements');
         if (cancelled) return;
         setEnts(data.entitlements || []);
         setUnauthorized(false);
