@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 import NavBar from '@/components/NavBar';
-import SolanaProviders from './SolanaProvider';
+import SolanaProviders from '@/app/SolonaProvider';
 
 export const metadata: Metadata = {
   title: 'Crypto Tip Jar',
