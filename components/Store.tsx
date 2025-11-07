@@ -24,7 +24,7 @@ export default function Store() {
     setMsg(null);
     setBusy(sku);
     try {
-      const { order_id, x402 } = await apiPost<CheckoutResp>('/store/checkout', { sku });
+      const { order_id, x402 } = await apiPost<CheckoutResp>('/api/store/checkout', { sku });
       if (x402.transaction) {
         const sig = await sendFromAdapter(x402.transaction, sendTransaction, connection);
         setMsg(`Submitted tx: ${sig}. x402 will webhook once finalized.`);

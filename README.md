@@ -11,22 +11,22 @@ pnpm dev
 ```
 
 ### Required env
-- `NEXT_PUBLIC_BFF_ORIGIN` – e.g. `https://crytip-backend2.vercel.app/api`
+- `NEXT_PUBLIC_API_BASE_URL` – e.g. `https://cryptip-backend.vercel.app`
 - `NEXT_PUBLIC_SOLANA_CLUSTER` – `mainnet-beta` (default) | `devnet` | `testnet`
 - `NEXT_PUBLIC_SOLANA_RPC` – (optional) Helius or other RPC URL
 
 ## Features
 - Phantom wallet connect (wallet-adapter)
-- SIWS: `/login` calls backend `/auth/siws/start` and `/finish` through the `/bff` proxy
-- Dashboard shows your entitlements from `/bff/me/entitlements`
-- Editor with templates, theme, links; saves to `/bff/pages`
-- Store page calls `/bff/store/checkout` and submits the returned x402 transaction through Phantom
+- SIWS: `/login` calls backend `/api/auth/siws/start` and `/finish`
+- Dashboard shows your entitlements from `/api/me/entitlements`
+- Editor with templates, theme, links; saves to `/api/pages`
+- Store page calls `/api/store/checkout` and submits the returned x402 transaction through Phantom
 - Public tip pages at `/{walletOrSlug}` (SSR fetching from backend)
 
 ## Deployment (Vercel)
 - Import this repo into Vercel as a Next.js app.
 - Set envs in Vercel Project Settings:
-  - `NEXT_PUBLIC_BFF_ORIGIN=https://<your-backend>.vercel.app/api`
+  - `NEXT_PUBLIC_API_BASE_URL=https://<your-backend>.vercel.app`
   - `NEXT_PUBLIC_SOLANA_CLUSTER=mainnet-beta`
   - `NEXT_PUBLIC_SOLANA_RPC=https://rpc.helius.xyz/?api-key=<key>` (optional)
 - Deploy.

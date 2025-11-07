@@ -37,7 +37,7 @@ export default function Editor() {
 
     async function load() {
       try {
-        const me = await apiGet<any>('/me/entitlements');
+        const me = await apiGet<any>('/api/me/entitlements');
         if (cancelled) return;
         const keys = (me.entitlements || []).map((e: any) => e.sku);
         setEntitlements(keys);
@@ -54,7 +54,7 @@ export default function Editor() {
       }
 
       try {
-        const page = await apiGet<any>('/pages/me');
+        const page = await apiGet<any>('/api/pages/me');
         if (cancelled) return;
         if (page?.template_key) setCfg((c) => ({ ...c, ...page }));
       } catch (err: unknown) {
@@ -83,7 +83,7 @@ export default function Editor() {
   async function save() {
     setStatus('Saving...');
     try {
-      await apiPost('/pages', {
+      await apiPost('/api/pages', {
         slug: cfg.slug || null,
         template_key: cfg.template_key,
         theme_json: cfg.theme,
