@@ -35,7 +35,9 @@ const rawEnv: RawEnv = {
   SESSION_SECRET: process.env.SESSION_SECRET,
   SESSION_COOKIE_NAME: process.env.SESSION_COOKIE_NAME,
   SESSION_COOKIE_DOMAIN: process.env.SESSION_COOKIE_DOMAIN,
-  SESSION_MAX_AGE: process.env.SESSION_MAX_AGE,
+  SESSION_MAX_AGE: process.env.SESSION_MAX_AGE
+    ? Number(process.env.SESSION_MAX_AGE)
+    : undefined,
   FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN,
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
   SIWS_DOMAIN: process.env.SIWS_DOMAIN,

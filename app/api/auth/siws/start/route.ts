@@ -19,9 +19,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return withCORS(req, res);
   }
 
-  const address = typeof (body as Record<string, unknown>)?.address === 'string'
-    ? (body as Record<string, unknown>).address.trim()
-    : '';
+  if (!body || typeof body !== 'object') {
+    const res = NextResponse.json({ error: 'Address is required' }, { status: 400 });
+    return withCORS(req, res);
+  }
+
+  const rawAddress = (body as { address?: unknown }).address;
+  const address = typeof rawAddress === 'string' ? rawAddress.trim() : '';
   if (!address) {
     const res = NextResponse.json({ error: 'Address is required' }, { status: 400 });
     return withCORS(req, res);

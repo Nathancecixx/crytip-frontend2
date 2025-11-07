@@ -107,7 +107,14 @@ export const guardOrigin = validateRequestOrigin;
 export function withCORS(req: NextRequest, res: Response | NextResponse): NextResponse {
   const result = validateRequestOrigin(req);
   const evaluation = result.evaluation;
-  const response = res instanceof NextResponse ? res : NextResponse.from(res);
+  const response =
+    res instanceof NextResponse
+      ? res
+      : new NextResponse(res.body, {
+          status: res.status,
+          statusText: res.statusText,
+          headers: new Headers(res.headers),
+        });
   const allowOrigin = determineAllowOrigin(req, evaluation);
   const allowHeaders =
     req.headers.get('access-control-request-headers') ??
