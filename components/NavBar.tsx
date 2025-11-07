@@ -2,9 +2,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
+import type { Route } from 'next';
 
-const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
+type NavProps = { href: Route; children: React.ReactNode };
+
+const NavLink = ({ href, children }: NavProps) => {
   const pathname = usePathname();
   const active = pathname === href;
   return (
