@@ -1,27 +1,24 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
+const rawBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-function isBrowser() {
-  return typeof window !== 'undefined';
+const missingApiBaseMessage =
+  'NEXT_PUBLIC_API_BASE_URL is not set. Set NEXT_PUBLIC_API_BASE_URL to the backend origin (e.g. https://api.example.com).';
+
+if (!rawBaseUrl) {
+  if (typeof console !== 'undefined' && typeof console.error === 'function') {
+    console.error(missingApiBaseMessage);
+  }
+  throw new Error(missingApiBaseMessage);
+}
+
+export const API_BASE_URL = rawBaseUrl.replace(/\/$/, '');
+
+function isAbsoluteUrl(path: string): boolean {
+  return /^https?:\/\//i.test(path);
 }
 
 function normalizeApiPath(path: string): string {
-  if (/^https?:\/\//i.test(path)) return path;
+  if (isAbsoluteUrl(path)) return path;
   const suffix = path.startsWith('/') ? path : `/${path}`;
-
-  if (suffix.startsWith('/bff/')) {
-    return suffix;
-  }
-
-  if (isBrowser()) {
-    if (suffix.startsWith('/api/')) {
-      return `/bff${suffix.slice(4)}`;
-    }
-    return suffix;
-  }
-
-  if (!API_BASE_URL) {
-    throw new Error('NEXT_PUBLIC_API_BASE_URL is not set');
-  }
   return `${API_BASE_URL}${suffix}`;
 }
 

@@ -99,14 +99,14 @@ Scheduled (free): Vercel Cron (once/day) for reconciliation of failed mints & su
 * **UI**: Tailwind + shadcn/ui; a11y basics; Recharts for analytics.
 * **State**: React Query/Server Actions; Zod validation.
 * **Wallet**: `@solana/wallet-adapter` (Phantom) for connect/signing.
-* **x402**: BFF returns order payload; Phantom signs/sends.
+* **x402**: backend returns order payload; Phantom signs/sends.
 
 ### 4.2 Editor UX
 
 * **Template Picker**: base + unlocked; live preview.
 * **Sections**: avatar, bio, links, media, gallery, tip widget, FAQ.
 * **Theme**: palette, font, spacing, background (image/video/shader). Add‑ons unlock effects.
-* **Gating**: `/bff/me/entitlements` (same-origin proxy) drives locks and purchase CTAs.
+* **Gating**: `NEXT_PUBLIC_API_BASE_URL` + `/api/me/entitlements` (direct backend call) drives locks and purchase CTAs.
 * **Publish**: saves JSON config; SSR composes deterministic HTML/CSS.
 
 ### 4.3 Error Handling & UX
@@ -119,20 +119,20 @@ Scheduled (free): Vercel Cron (once/day) for reconciliation of failed mints & su
 
 ## 5. Server Programs
 
-### 5.1 BFF (Next.js API Routes on Vercel)
+### 5.1 Backend HTTP API
 
 **Key endpoints**
 
 ```
-POST /bff/auth/siws/start        → returns nonce + message
-POST /bff/auth/siws/finish       → verify signature → set HttpOnly session cookie
-GET  /bff/pages/:slug            → public page metadata
-POST /bff/pages                  → create/update page (auth)
-GET  /bff/me                     → profile + entitlements snapshot (auth)
-GET  /bff/me/entitlements        → licenses/add‑ons/subscriptions (auth)
-POST /bff/store/checkout         → create order, return x402 tx payload
-POST /bff/store/webhook/x402     → HMAC verify → on‑chain confirm → mark paid → **mint now**
-GET  /bff/health                 → { build, db, rpc }
+POST /api/auth/siws/start        → returns nonce + message
+POST /api/auth/siws/finish       → verify signature → set HttpOnly session cookie
+GET  /api/pages/:slug            → public page metadata
+POST /api/pages                  → create/update page (auth)
+GET  /api/me                     → profile + entitlements snapshot (auth)
+GET  /api/me/entitlements        → licenses/add‑ons/subscriptions (auth)
+POST /api/store/checkout         → create order, return x402 tx payload
+POST /api/store/webhook/x402     → HMAC verify → on‑chain confirm → mark paid → **mint now**
+GET  /api/health                 → { build, db, rpc }
 ```
 
 **Responsibilities**
@@ -227,11 +227,11 @@ GET  /bff/health                 → { build, db, rpc }
 ### 8.1 Flow
 
 1. User picks an SKU (e.g., `templates.packA`).
-2. Frontend calls `/bff/store/checkout` with `{ sku }`.
-3. BFF validates SKU (allowlist), inserts `purchases(pending)` with `idempotency_key`, returns **x402 tx payload**.
+2. Frontend calls backend `/api/store/checkout` with `{ sku }`.
+3. Backend validates SKU (allowlist), inserts `purchases(pending)` with `idempotency_key`, returns **x402 tx payload**.
 4. Phantom signs/sends USDC tx.
-5. x402 posts **webhook** → `/bff/store/webhook/x402` with `{ order_id, sku, tx_sig, amount_atomic }` and headers `X-402-Signature`, `X-Idempotency-Key`.
-6. BFF verifies HMAC + confirms tx on chain with `finalized` commitment; sets purchase → **paid** and **mints immediately**. On mint error → set `paid-pending-mint` for daily retry.
+5. x402 posts **webhook** → backend `/api/store/webhook/x402` with `{ order_id, sku, tx_sig, amount_atomic }` and headers `X-402-Signature`, `X-Idempotency-Key`.
+6. Backend verifies HMAC + confirms tx on chain with `finalized` commitment; sets purchase → **paid** and **mints immediately**. On mint error → set `paid-pending-mint` for daily retry.
 
 ### 8.2 SKUs (MVP)
 
@@ -281,7 +281,7 @@ GET  /bff/health                 → { build, db, rpc }
 
 ### 11.1 Checkout
 
-**POST** `/bff/store/checkout`
+**POST** `/api/store/checkout`
 
 ```json
 { "sku": "templates.packA" }
@@ -298,7 +298,7 @@ GET  /bff/health                 → { build, db, rpc }
 
 ### 11.2 Webhook (x402)
 
-**POST** `/bff/store/webhook/x402`
+**POST** `/api/store/webhook/x402`
 
 * **Headers**: `X-402-Signature`, `X-Idempotency-Key`
 
