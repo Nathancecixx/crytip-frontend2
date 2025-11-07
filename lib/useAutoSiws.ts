@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { siwsStart, siwsFinish, apiLogout, siwsMessageToBytes } from './siws';
+import { apiLogout } from './siws';
+import { siwsLogin } from './siws-login';
 import type { Adapter } from '@solana/wallet-adapter-base';
 import { requestEntitlementsRefresh } from './entitlements';
 
@@ -36,17 +37,10 @@ export function useAutoSiws() {
           return;
         }
 
-        const { message } = await siwsStart(address);
-        const msgBytes = siwsMessageToBytes(message);
-        const rawSignature = await signMessage(msgBytes);
-        console.debug('Auto SIWS breadcrumb', {
-          stage: 'finish',
-          sending: {
-            address,
-            messageLen: message.length,
-          },
-        });
-        await siwsFinish(address, message, rawSignature);
+        const result = await siwsLogin(publicKey, signMessage);
+        if (!result.ok) {
+          throw new Error(result.error);
+        }
         requestEntitlementsRefresh();
       } catch (err) {
         console.error('Auto SIWS failed:', err);
