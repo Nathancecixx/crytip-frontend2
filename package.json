@@ -13,7 +13,7 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "zod": "3.23.8",
-    "@solana/web3.js": "^1.99.0",
+    "@solana/web3.js": "^1.99.1",
     "@solana/wallet-adapter-react": "0.15.39",
     "@solana/wallet-adapter-react-ui": "0.9.35",
     "clsx": "2.1.1",
@@ -29,7 +29,7 @@
     "@types/react-dom": "18.3.0"
   },
   "overrides": {
-    "@solana/web3.js": "^1.99.0"
+    "@solana/web3.js": "^1.99.1"
   },
   "engines": {
     "node": ">=18.17 <21"
