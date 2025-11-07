@@ -3,16 +3,18 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
-import { siwsStart, siwsFinish, siwsMessageToBytes } from '@/lib/siws';
+import { siwsLogin } from '@/lib/siws-login';
 import { requestEntitlementsRefresh } from '@/lib/entitlements';
 
 export default function LoginPage() {
   const router = useRouter();
   const { connect, connected, publicKey, signMessage } = useWallet();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = useCallback(async () => {
     if (loading) return;
+    setError(null);
     setLoading(true);
     try {
       if (!connected) {
@@ -21,24 +23,17 @@ export default function LoginPage() {
       if (!publicKey) throw new Error('No wallet connected');
       if (!signMessage) throw new Error('This wallet does not support signMessage');
 
-      const address = publicKey.toBase58();
+      const result = await siwsLogin(publicKey, signMessage);
+      if (!result.ok) {
+        setError(result.error ?? 'Login failed');
+        return;
+      }
 
-      // 1) Start SIWS → receive challenge message (nonce embedded)
-      const { message } = await siwsStart(address);
-
-      // 2) Sign the message exactly as returned
-      const msgBytes = siwsMessageToBytes(message);
-      const signature = await signMessage(msgBytes);
-
-      // 3) Finish SIWS with the original message + signature
-      await siwsFinish(address, message, signature);
-
-      // 4) Refresh entitlements and go to dashboard
       requestEntitlementsRefresh();
       router.push('/dashboard');
     } catch (err: any) {
       console.error('SIWS login failed:', err);
-      alert(err?.message || 'Login failed');
+      setError(err?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -47,6 +42,7 @@ export default function LoginPage() {
   return (
     <div className="mx-auto max-w-md p-6">
       <h1 className="mb-4 text-2xl font-semibold">Sign in with Wallet</h1>
+      {error && <p className="mb-3 rounded-md bg-red-500/10 p-3 text-sm text-red-400">{error}</p>}
       <button
         onClick={handleLogin}
         disabled={loading}
