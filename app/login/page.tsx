@@ -1,45 +1,58 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
-import { siwsFinish, siwsStart } from '@/lib/siws';
+import { siwsStart, siwsFinish } from '@/lib/siws';
 import { requestEntitlementsRefresh } from '@/lib/entitlements';
 
-export default function Login() {
-  const { publicKey, signMessage, connected } = useWallet();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default function LoginPage() {
   const router = useRouter();
+  const { connect, connected, publicKey, signMessage } = useWallet();
+  const [loading, setLoading] = useState(false);
 
-  async function start() {
-    setError(null);
-    if (!publicKey) { setError('Connect your wallet in the top right first.'); return; }
-    if (!signMessage) { setError('Wallet does not support signMessage.'); return; }
+  const handleLogin = useCallback(async () => {
+    if (loading) return;
     setLoading(true);
     try {
+      if (!connected) {
+        await connect();
+      }
+      if (!publicKey) throw new Error('No wallet connected');
+      if (!signMessage) throw new Error('This wallet does not support signMessage');
+
       const address = publicKey.toBase58();
-      const { message } = await siwsStart(address);
+
+      // 1) Start SIWS → receive message + nonce
+      const { message, nonce } = await siwsStart(address);
+
+      // 2) Sign the message
       const enc = new TextEncoder().encode(message);
       const sigBytes = await signMessage(enc);
-      await siwsFinish(address, message, sigBytes);
+
+      // 3) Finish SIWS (IMPORTANT: include nonce)
+      await siwsFinish(address, message, sigBytes, nonce);
+
+      // 4) Refresh entitlements and go to dashboard
       requestEntitlementsRefresh();
       router.push('/dashboard');
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e ?? '');
-      setError(message || 'Login failed');
+    } catch (err: any) {
+      console.error('SIWS login failed:', err);
+      alert(err?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
-  }
+  }, [loading, connected, connect, publicKey, signMessage, router]);
 
   return (
-    <div className="card p-8 max-w-xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-4">Sign in with Solana</h1>
-      <p className="text-white/80 mb-4">Connect your wallet (top right), then sign a message to authenticate.</p>
-      {error && <div className="mb-3 text-red-300">{error}</div>}
-      <button className="btn" onClick={start} disabled={loading || !connected}>
-        {loading ? 'Signing...' : 'Sign In'}
+    <div className="mx-auto max-w-md p-6">
+      <h1 className="mb-4 text-2xl font-semibold">Sign in with Wallet</h1>
+      <button
+        onClick={handleLogin}
+        disabled={loading}
+        className="rounded-xl bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 disabled:opacity-60"
+      >
+        {loading ? 'Signing…' : 'Sign in with wallet'}
       </button>
     </div>
   );
