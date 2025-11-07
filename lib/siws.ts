@@ -2,14 +2,14 @@ import bs58 from 'bs58';
 import { apiPost } from './api';
 
 export async function siwsStart(address: string): Promise<{ message: string; nonce: string }> {
-  return apiPost<{ message: string; nonce: string }>('/auth/siws/start', { address, wallet: address });
+  return apiPost<{ message: string; nonce: string }>('/api/auth/siws/start', { address, wallet: address });
 }
 
 export async function siwsFinish(address: string, message: string, signatureBytes: Uint8Array) {
   const signature = bs58.encode(signatureBytes);
-  await apiPost('/auth/siws/finish', { address, wallet: address, message, signature });
+  await apiPost('/api/auth/siws/finish', { address, wallet: address, message, signature });
 }
 
 export async function apiLogout() {
-  await apiPost('/auth/logout', {}).catch(() => {});
+  await apiPost('/api/auth/logout', {}).catch(() => {});
 }
