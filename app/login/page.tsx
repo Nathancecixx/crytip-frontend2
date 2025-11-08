@@ -1,11 +1,10 @@
-// app/login/page.tsx
 'use client';
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@solana/wallet-adapter-react';
 import bs58 from 'bs58';
-import { siwsStart, siwsFinish, apiGet } from '@/src/lib/siws';
+import { siwsStart, siwsFinish, apiGet } from '@/lib/siws';
 
 const PLACEHOLDER = '<WALLET_ADDRESS>';
 
@@ -19,44 +18,29 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      // 1) Ensure wallet is connected
       if (!connected) {
-        await connect(); // shows wallet UI if needed
+        await connect();
       }
-      if (!publicKey) {
-        throw new Error('wallet_no_public_key');
-      }
-      if (!signMessage) {
-        // Some wallets do not support message signing
-        throw new Error('wallet_sign_message_unavailable');
-      }
+      if (!publicKey) throw new Error('wallet_no_public_key');
+      if (!signMessage) throw new Error('wallet_sign_message_unavailable');
 
       const address = publicKey.toBase58();
 
-      // 2) Get challenge from backend
+      // 1) Get the challenge from backend
       const challenge = await siwsStart();
 
-      // 3) Replace placeholder in challenge message with the actual address
+      // 2) Replace placeholder with the real address (must match server’s verify bytes)
       const messageToSign = challenge.message.replace(PLACEHOLDER, address);
 
-      // 4) Sign the exact message shown (UTF-8 bytes)
-      const encoder = new TextEncoder();
-      const signatureBytes = await signMessage(encoder.encode(messageToSign));
-
-      // Prefer base58 string to match backend normalization
+      // 3) Sign and send to backend
+      const signatureBytes = await signMessage(new TextEncoder().encode(messageToSign));
       const signatureBase58 = bs58.encode(signatureBytes);
 
-      // 5) Finish SIWS on backend (this sets the session cookie)
-      await siwsFinish({
-        address,
-        signature: signatureBase58,
-        nonce: challenge.nonce,
-      });
+      await siwsFinish({ address, signature: signatureBase58, nonce: challenge.nonce });
 
-      // 6) Optional sanity check: hit an authenticated endpoint
+      // 4) Optional sanity check: should be 200 if cookie is set
       await apiGet('/api/me');
 
-      // 7) Navigate to your app's dashboard (adjust path if needed)
       router.replace('/dashboard');
     } catch (e: any) {
       console.error('login_error', e);
@@ -85,8 +69,7 @@ export default function LoginPage() {
       )}
 
       <p className="text-xs opacity-70 max-w-[520px] text-center">
-        By continuing you agree to sign a message to prove ownership of your wallet.
-        No funds are moved.
+        You’ll sign a message to prove wallet ownership. No funds move.
       </p>
     </main>
   );

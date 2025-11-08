@@ -1,5 +1,5 @@
-// src/lib/siws.ts
-import { BACKEND_ORIGIN } from './config';
+// lib/siws.ts
+import { API_BASE_URL } from './config';
 
 export type SiwsStartResponse = {
   nonce: string;
@@ -7,11 +7,16 @@ export type SiwsStartResponse = {
   expiresAt?: string;
 };
 
+function apiUrl(path: string) {
+  if (!API_BASE_URL) throw new Error('Missing NEXT_PUBLIC_API_BASE_URL');
+  return `${API_BASE_URL}${path}`;
+}
+
 export async function siwsStart(): Promise<SiwsStartResponse> {
-  const res = await fetch(`${BACKEND_ORIGIN}/api/auth/siws/start`, {
+  const res = await fetch(apiUrl('/api/auth/siws/start'), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    credentials: 'include', // keep cookies flowing even on start
+    credentials: 'include',
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -27,11 +32,11 @@ export async function siwsFinish(payload: {
   signatureBase64?: string;     // base64
   nonce: string;
 }) {
-  const res = await fetch(`${BACKEND_ORIGIN}/api/auth/siws/finish`, {
+  const res = await fetch(apiUrl('/api/auth/siws/finish'), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
-    credentials: 'include', // REQUIRED so the Set-Cookie from the server is accepted
+    credentials: 'include', // REQUIRED to accept Set-Cookie
   });
 
   if (!res.ok) {
@@ -44,14 +49,13 @@ export async function siwsFinish(payload: {
     }
     throw new Error(`siws_finish_failed: ${res.status} ${detail}`);
   }
-
   return res.json();
 }
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
-  const res = await fetch(`${BACKEND_ORIGIN}${path}`, {
+  const res = await fetch(apiUrl(path), {
     method: 'GET',
-    credentials: 'include', // send the session cookie with every API call
+    credentials: 'include', // send the session cookie
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
