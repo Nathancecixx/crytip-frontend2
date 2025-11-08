@@ -1,12 +1,7 @@
 import bs58 from 'bs58';
-import { ApiError, apiPost, API_BASE_URL } from './api';
+import { ApiError, apiPost } from './api';
 
 const textEncoder = new TextEncoder();
-
-function requireBackendUrl(path: string): string {
-  const suffix = path.startsWith('/') ? path : `/${path}`;
-  return `${API_BASE_URL}${suffix}`;
-}
 
 function requireFrontendHost(): string {
   if (typeof window === 'undefined' || !window.location?.host) {
@@ -103,10 +98,9 @@ export type SiwsStartResp = { message: string; nonce: string };
 
 export async function siwsStart(address: string): Promise<SiwsStartResp> {
   const domain = requireFrontendHost();
-  const startUrl = requireBackendUrl('/api/auth/siws/start');
 
   const response = await apiPost<SiwsStartResp>(
-    startUrl,
+    '/api/auth/siws/start',
     { address, domain },
     { headers: { 'X-CSRF': '1' } }
   ).catch((err) => {
@@ -132,11 +126,8 @@ export async function siwsFinish(
   signatureInput: SignatureInput
 ) {
   const signatureBytes = signatureInputToBytes(signatureInput);
-
-  const finishUrl = requireBackendUrl('/api/auth/siws/finish');
-
   await apiPost(
-    finishUrl,
+    '/api/auth/siws/finish',
     {
       address,
       message,
