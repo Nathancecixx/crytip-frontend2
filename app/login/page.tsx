@@ -1,119 +1,74 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { siwsLogin } from '@/lib/siws-login';
-import { useSession } from '@/lib/session';
-import { resolveNextRoute } from '@/lib/routes';
+import bs58 from 'bs58';
+import { siwsStart, siwsFinish, apiGet } from '@/lib/siws';
 
-type Status = 'idle' | 'connecting' | 'signing';
-
-function formatError(error: unknown): string {
-  if (!error) return 'Something went wrong while signing in.';
-  if (typeof error === 'string') return error;
-  if (error instanceof Error) return error.message || 'Failed to sign in.';
-  if (typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === 'string' && message) return message;
-  }
-  return 'Something went wrong while signing in.';
-}
+const PLACEHOLDER = '<WALLET_ADDRESS>';
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextRoute = useMemo(() => resolveNextRoute(searchParams?.get('next')), [searchParams]);
-  const { refresh, status: sessionStatus, initializing } = useSession();
-
-  const { publicKey, signMessage, connect, connected, connecting, wallet } = useWallet();
+  const { publicKey, signMessage, connect, connected } = useWallet();
   const { setVisible } = useWalletModal();
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const [status, setStatus] = useState<Status>('idle');
-  const [error, setError] = useState<string | null>(null);
-
-  const address = useMemo(() => publicKey?.toBase58() ?? null, [publicKey]);
-
-  useEffect(() => {
-    if (!initializing && sessionStatus === 'authenticated') {
-      router.replace(nextRoute);
-    }
-  }, [initializing, sessionStatus, router, nextRoute]);
-
-  const ensureWalletSelected = useCallback(() => {
-    if (!wallet) {
-      setVisible(true);
-      throw new Error('Select a wallet to continue.');
-    }
-  }, [wallet, setVisible]);
-
-  const signIn = useCallback(async () => {
+  const handleLogin = React.useCallback(async () => {
     setError(null);
-    setStatus('idle');
-
+    setLoading(true);
     try {
-      ensureWalletSelected();
-
       if (!connected) {
-        setStatus('connecting');
-        await connect();
+        try {
+          await connect();
+        } catch (err: any) {
+          if (err?.name === 'WalletNotSelectedError') {
+            setVisible(true);
+            return; // wait for user to pick wallet, then click again
+          }
+          throw err;
+        }
       }
+      if (!publicKey) throw new Error('wallet_no_public_key');
+      if (!signMessage) throw new Error('wallet_sign_message_unavailable');
 
-      if (!publicKey) throw new Error('Your wallet did not provide a public key.');
-      if (!signMessage) throw new Error('Your wallet does not support message signing.');
+      const address = publicKey.toBase58();
 
-      setStatus('signing');
-      const result = await siwsLogin(publicKey, signMessage);
-      if (!result.ok) {
-        throw new Error(result.error);
-      }
+      const challenge = await siwsStart();
+      const messageToSign = challenge.message.replace(PLACEHOLDER, address);
 
-      await refresh();
-      router.replace(nextRoute);
-    } catch (err) {
-      const message = formatError(err);
-      if (!message.includes('Select a wallet')) {
-        console.error('Failed to sign in with wallet:', err);
-      }
-      setError(message);
-      setStatus('idle');
+      const signatureBytes = await signMessage(new TextEncoder().encode(messageToSign));
+      const signatureBase58 = bs58.encode(signatureBytes);
+
+      await siwsFinish({ address, signature: signatureBase58, nonce: challenge.nonce });
+
+      // Session sanity check
+      await apiGet('/api/me');
+
+      router.replace('/dashboard');
+    } catch (e: any) {
+      console.error('login_error', e);
+      setError(e?.message ?? 'login_failed');
+    } finally {
+      setLoading(false);
     }
-  }, [ensureWalletSelected, connected, connect, publicKey, signMessage, refresh, router, nextRoute]);
-
-  const isBusy = connecting || status !== 'idle';
+  }, [connected, connect, publicKey, signMessage, setVisible, router]);
 
   return (
-    <main className="flex min-h-[70vh] flex-col items-center justify-center gap-6 p-8 text-center">
-      <div className="max-w-xl space-y-4">
-        <h1 className="text-3xl font-semibold">Sign in with your Solana wallet</h1>
-        <p className="text-white/70">
-          We&apos;ll request a one-time Sign-In With Solana message from the Crypto Tip API. Review the details, sign the
-          message in your wallet, and we&apos;ll finish the secure login—no funds move.
-        </p>
-      </div>
-
-      <div className="flex flex-col items-center gap-3">
-        <button
-          type="button"
-          onClick={signIn}
-          disabled={isBusy}
-          className="rounded-xl bg-brand-600 px-6 py-3 text-base font-semibold text-white shadow disabled:opacity-60 hover:bg-brand-500 transition"
-        >
-          {status === 'connecting' ? 'Connecting wallet…' : status === 'signing' ? 'Awaiting signature…' : 'Sign in'}
-        </button>
-        <div className="text-xs text-white/60">
-          {address ? `Connected as ${address}` : 'Connect any Wallet Standard compatible wallet.'}
-        </div>
-        <WalletMultiButton className="!mt-2 !rounded-xl !bg-white/10 !px-4 !py-2 !text-sm" />
-      </div>
-
-      {error && <div className="max-w-md rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div>}
-
-      <p className="text-xs text-white/60 max-w-md">
-        Your session is stored as an HTTP-only cookie from the API. If you disconnect your wallet we&apos;ll sign you out
-        automatically.
+    <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8">
+      <h1 className="text-2xl font-semibold">Sign in with your Solana wallet</h1>
+      <button
+        disabled={loading}
+        onClick={handleLogin}
+        className="rounded-xl px-5 py-3 font-medium shadow hover:opacity-90 disabled:opacity-60 border"
+      >
+        {loading ? 'Signing…' : 'Sign in'}
+      </button>
+      {error && <p className="text-sm text-red-500 max-w-[520px] text-center">{error}</p>}
+      <p className="text-xs opacity-70 max-w-[520px] text-center">
+        You’ll sign a message to prove wallet ownership. No funds move.
       </p>
     </main>
   );

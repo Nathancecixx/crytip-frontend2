@@ -28,7 +28,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   const standardAdapters = useStandardWalletAdapters([]);
 
-  const wallets = useMemo<Adapter[]>(() => [...standardAdapters], [standardAdapters]);
+  const wallets: any[] = [];
 
   if (!mounted) return null;
 
