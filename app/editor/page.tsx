@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, apiGet, apiPost } from '@/lib/api';
 import { Section } from '@/components/Section';
-import { ENTITLEMENTS_REFRESH_EVENT } from '@/lib/entitlements';
+import { useSession } from '@/lib/session';
 
 type PageConfig = {
   slug?: string | null;
@@ -35,9 +35,7 @@ const PREMIUM_TEMPLATES = [
 
 export default function Editor() {
   const [cfg, setCfg] = useState<PageConfig>(DEFAULT_CONFIG);
-  const [entitlements, setEntitlements] = useState<string[]>([]);
   const [status, setStatus] = useState<string | null>(null);
-  const [entitlementError, setEntitlementError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
   const [authPrompt, setAuthPrompt] = useState<string | null>(null);
   const [me, setMe] = useState<MeResponse | null>(null);
@@ -45,6 +43,21 @@ export default function Editor() {
   const [creating, setCreating] = useState(false);
   const [createStatus, setCreateStatus] = useState<string | null>(null);
   const loadRef = useRef<() => Promise<void>>(async () => {});
+
+  const { status: sessionStatus, entitlements: sessionEntitlements, error: sessionError } = useSession();
+
+  const entitlementSkus = useMemo(() => sessionEntitlements.map((e) => e.sku), [sessionEntitlements]);
+  const hasPackA = entitlementSkus.includes('templates.packA');
+
+  const entitlementError = useMemo(() => {
+    if (sessionStatus === 'unauthenticated') {
+      return 'Sign in with your wallet to load premium templates.';
+    }
+    if (sessionStatus === 'error') {
+      return sessionError || 'Failed to load entitlements.';
+    }
+    return null;
+  }, [sessionStatus, sessionError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,8 +74,6 @@ export default function Editor() {
         if (err instanceof ApiError && err.status === 401) {
           setMe(null);
           setAuthPrompt('Sign in with your wallet to edit your page.');
-          setEntitlements([]);
-          setEntitlementError(null);
           setPageMissing(false);
           return;
         }
@@ -70,23 +81,6 @@ export default function Editor() {
         setPageError(message || 'Failed to load your profile.');
         setMe(null);
         return;
-      }
-
-      try {
-        const ent = await apiGet<{ entitlements: { sku: string }[] }>('/api/me/entitlements');
-        if (cancelled) return;
-        const keys = (ent.entitlements || []).map((e) => e.sku);
-        setEntitlements(keys);
-        setEntitlementError(null);
-      } catch (err) {
-        if (cancelled) return;
-        if (err instanceof ApiError && err.status === 401) {
-          setEntitlements([]);
-          setEntitlementError('Sign in with your wallet to load premium templates.');
-        } else {
-          const message = err instanceof Error ? err.message : String(err ?? '');
-          setEntitlementError(message || 'Failed to load entitlements.');
-        }
       }
 
       const slug = meData.handle || meData.wallet_pubkey;
@@ -125,21 +119,19 @@ export default function Editor() {
 
     loadRef.current = load;
 
-    load();
-
-    function handleRefresh() {
+    if (sessionStatus === 'authenticated' || sessionStatus === 'error') {
       load();
+    } else if (sessionStatus === 'unauthenticated') {
+      setMe(null);
+      setAuthPrompt('Sign in with your wallet to edit your page.');
+      setPageMissing(false);
+      setPageError(null);
     }
-
-    window.addEventListener(ENTITLEMENTS_REFRESH_EVENT, handleRefresh);
 
     return () => {
       cancelled = true;
-      window.removeEventListener(ENTITLEMENTS_REFRESH_EVENT, handleRefresh);
     };
-  }, []);
-
-  const hasPackA = entitlements.includes('templates.packA');
+  }, [sessionStatus]);
 
   async function createPage() {
     if (!me) {
