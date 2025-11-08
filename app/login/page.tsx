@@ -7,6 +7,7 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { siwsLogin } from '@/lib/siws-login';
 import { useSession } from '@/lib/session';
+import { resolveNextRoute } from '@/lib/routes';
 
 type Status = 'idle' | 'connecting' | 'signing';
 
@@ -24,7 +25,7 @@ function formatError(error: unknown): string {
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextUrl = searchParams?.get('next') ?? '/dashboard';
+  const nextRoute = useMemo(() => resolveNextRoute(searchParams?.get('next')), [searchParams]);
   const { refresh, status: sessionStatus, initializing } = useSession();
 
   const { publicKey, signMessage, connect, connected, connecting, wallet } = useWallet();
@@ -37,9 +38,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!initializing && sessionStatus === 'authenticated') {
-      router.replace(nextUrl);
+      router.replace(nextRoute);
     }
-  }, [initializing, sessionStatus, router, nextUrl]);
+  }, [initializing, sessionStatus, router, nextRoute]);
 
   const ensureWalletSelected = useCallback(() => {
     if (!wallet) {
@@ -70,7 +71,7 @@ export default function LoginPage() {
       }
 
       await refresh();
-      router.replace(nextUrl);
+      router.replace(nextRoute);
     } catch (err) {
       const message = formatError(err);
       if (!message.includes('Select a wallet')) {
@@ -79,7 +80,7 @@ export default function LoginPage() {
       setError(message);
       setStatus('idle');
     }
-  }, [ensureWalletSelected, connected, connect, publicKey, signMessage, refresh, router, nextUrl]);
+  }, [ensureWalletSelected, connected, connect, publicKey, signMessage, refresh, router, nextRoute]);
 
   const isBusy = connecting || status !== 'idle';
 

@@ -2,10 +2,12 @@
 
 import { PropsWithChildren, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import type { Route } from 'next';
 import { useSession } from '@/lib/session';
+import { isAllowedNextRoute } from '@/lib/routes';
 
 type ProtectedRouteProps = PropsWithChildren<{
-  redirectTo?: string;
+  redirectTo?: Route;
   loadingLabel?: string;
 }>;
 
@@ -22,10 +24,10 @@ export default function ProtectedRoute({
     if (initializing) return;
     if (status === 'unauthenticated') {
       const params = new URLSearchParams();
-      if (pathname && pathname !== '/') {
+      if (pathname && pathname !== '/' && isAllowedNextRoute(pathname)) {
         params.set('next', pathname);
       }
-      const target = params.size > 0 ? `${redirectTo}?${params.toString()}` : redirectTo;
+      const target: Route = params.size > 0 ? (`${redirectTo}?${params.toString()}` as Route) : redirectTo;
       router.replace(target);
     }
   }, [status, initializing, redirectTo, router, pathname]);
