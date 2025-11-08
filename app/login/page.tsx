@@ -8,21 +8,23 @@ import { requestEntitlementsRefresh } from '@/lib/entitlements';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { connect, connected, publicKey, signMessage } = useWallet();
+  const { connected, publicKey, signMessage } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = useCallback(async () => {
     if (loading) return;
+    if (!connected || !publicKey) {
+      setError('Connect your wallet to sign in.');
+      return;
+    }
+    if (!signMessage) {
+      setError('This wallet does not support message signing.');
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      if (!connected) {
-        await connect();
-      }
-      if (!publicKey) throw new Error('No wallet connected');
-      if (!signMessage) throw new Error('This wallet does not support signMessage');
-
       const result = await siwsLogin(publicKey, signMessage);
       if (!result.ok) {
         setError(result.error ?? 'Login failed');
@@ -37,7 +39,7 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  }, [loading, connected, connect, publicKey, signMessage, router]);
+  }, [loading, connected, publicKey, signMessage, router]);
 
   return (
     <div className="mx-auto max-w-md p-6">
@@ -45,7 +47,7 @@ export default function LoginPage() {
       {error && <p className="mb-3 rounded-md bg-red-500/10 p-3 text-sm text-red-400">{error}</p>}
       <button
         onClick={handleLogin}
-        disabled={loading}
+        disabled={loading || !connected || !signMessage}
         className="rounded-xl bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 disabled:opacity-60"
       >
         {loading ? 'Signing…' : 'Sign in with wallet'}
