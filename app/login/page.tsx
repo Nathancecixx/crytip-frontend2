@@ -4,13 +4,14 @@ import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
 import { siwsLogin } from '@/lib/siws-login';
-import { requestEntitlementsRefresh } from '@/lib/entitlements';
+import { useSession } from '@/lib/session';
 
 export default function LoginPage() {
   const router = useRouter();
   const { connected, publicKey, signMessage } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { refresh } = useSession();
 
   const handleLogin = useCallback(async () => {
     if (loading) return;
@@ -31,7 +32,7 @@ export default function LoginPage() {
         return;
       }
 
-      requestEntitlementsRefresh();
+      await refresh();
       router.push('/dashboard');
     } catch (err: any) {
       console.error('SIWS login failed:', err);
@@ -39,7 +40,7 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  }, [loading, connected, publicKey, signMessage, router]);
+  }, [loading, connected, publicKey, signMessage, router, refresh]);
 
   return (
     <div className="mx-auto max-w-md p-6">

@@ -7,6 +7,7 @@ import '@solana/wallet-adapter-react-ui/styles.css';
 import { clusterApiUrl } from '@solana/web3.js';
 import { useAutoSiws } from '@/lib/useAutoSiws';
 import type { Adapter } from '@solana/wallet-adapter-base';
+import { SessionProvider } from '@/lib/session';
 
 function AutoSiwsHandler() {
   useAutoSiws();
@@ -29,8 +30,10 @@ export default function WalletKit({ children }: { children: ReactNode }) {
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-          <AutoSiwsHandler />
-          {children}
+          <SessionProvider>
+            <AutoSiwsHandler />
+            {children}
+          </SessionProvider>
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

@@ -5,12 +5,13 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { apiLogout } from './siws';
 import { siwsLogin } from './siws-login';
 import type { Adapter } from '@solana/wallet-adapter-base';
-import { requestEntitlementsRefresh } from './entitlements';
+import { useSession } from './session';
 
 export function useAutoSiws() {
   const { connected, publicKey, signMessage, wallet } = useWallet();
   const lastAddress = useRef<string | null>(null);
   const running = useRef(false);
+  const { refresh } = useSession();
 
   function adapterHasSignIn(
     adapter: Adapter | null | undefined
@@ -33,7 +34,7 @@ export function useAutoSiws() {
         const adapter = wallet?.adapter ?? null;
         if (adapterHasSignIn(adapter)) {
           await adapter.signIn();
-          requestEntitlementsRefresh();
+          await refresh();
           return;
         }
 
@@ -41,7 +42,7 @@ export function useAutoSiws() {
         if (!result.ok) {
           throw new Error(result.error);
         }
-        requestEntitlementsRefresh();
+        await refresh();
       } catch (err) {
         console.error('Auto SIWS failed:', err);
         lastAddress.current = null;
@@ -49,14 +50,18 @@ export function useAutoSiws() {
         running.current = false;
       }
     })();
-  }, [connected, publicKey, signMessage, wallet]);
+  }, [connected, publicKey, signMessage, wallet, refresh]);
 
   useEffect(() => {
     if (!connected && lastAddress.current) {
       lastAddress.current = null;
-      apiLogout().finally(() => {
-        requestEntitlementsRefresh();
-      });
+      apiLogout()
+        .catch((err) => {
+          console.error('Failed to log out:', err);
+        })
+        .finally(() => {
+          refresh();
+        });
     }
-  }, [connected]);
+  }, [connected, refresh]);
 }

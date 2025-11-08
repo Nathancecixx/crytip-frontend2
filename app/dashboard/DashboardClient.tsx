@@ -1,65 +1,40 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { ApiError, apiGet } from '@/lib/api';
-import { ENTITLEMENTS_REFRESH_EVENT } from '@/lib/entitlements';
+import { useMemo } from 'react';
+import { useSession } from '@/lib/session';
 
 type Entitlement = {
-  type: 'license' | 'addon' | 'subscription';
+  type?: 'license' | 'addon' | 'subscription';
   sku: string;
-  status: string;
+  status?: string;
   expires_at?: string | null;
   ref_mint?: string | null;
 };
 
 export default function DashboardClient() {
-  const [ents, setEnts] = useState<Entitlement[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [unauthorized, setUnauthorized] = useState(false);
+  const { entitlements, status, error, initializing, refreshing } = useSession();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadEntitlements() {
-      try {
-        const data = await apiGet<{ entitlements: Entitlement[] }>('/api/me/entitlements');
-        if (cancelled) return;
-        setEnts(data.entitlements || []);
-        setUnauthorized(false);
-        setError(null);
-      } catch (e: any) {
-        if (cancelled) return;
-        if (e instanceof ApiError && e.status === 401) {
-          setUnauthorized(true);
-          setEnts([]);
-          setError('Sign in with your wallet to view your entitlements.');
-          return;
-        }
-        setError(e?.message ?? 'Failed to load entitlements.');
-      }
+  const { list, unauthorized, displayError } = useMemo(() => {
+    const unauthorized = status === 'unauthenticated';
+    const list = status === 'authenticated' ? (entitlements as Entitlement[]) : [];
+    let displayError: string | null = null;
+    if (unauthorized) {
+      displayError = 'Please sign in';
+    } else if (status === 'error') {
+      displayError = error ?? 'Failed to load entitlements.';
     }
+    return { list, unauthorized, displayError };
+  }, [entitlements, status, error]);
 
-    loadEntitlements();
-
-    function handleRefresh() {
-      loadEntitlements();
-    }
-
-    window.addEventListener(ENTITLEMENTS_REFRESH_EVENT, handleRefresh);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener(ENTITLEMENTS_REFRESH_EVENT, handleRefresh);
-    };
-  }, []);
+  const showLoading = initializing || (refreshing && status === 'authenticated' && list.length === 0);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
-      {error && (
+      {displayError && (
         <div className={`card p-4 space-y-3 ${unauthorized ? 'text-amber-200' : 'text-red-300'}`}>
-          <div>{error}</div>
+          <div>{displayError}</div>
           {unauthorized && (
             <Link
               href="/login"
@@ -72,13 +47,15 @@ export default function DashboardClient() {
       )}
       <div className="card p-6">
         <h2 className="font-semibold mb-3">Your Entitlements</h2>
-        {ents.length === 0 && <div className="text-white/70">No entitlements yet.</div>}
+        {showLoading && <div className="text-white/70">Loading…</div>}
+        {!showLoading && list.length === 0 && <div className="text-white/70">No entitlements yet.</div>}
         <ul className="space-y-2">
-          {ents.map((e, i) => (
-            <li key={i} className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-2">
-              <span>{e.type} — {e.sku}</span>
+          {list.map((e, i) => (
+            <li key={e.sku || i} className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-2">
+              <span>{e.type ? `${e.type} — ${e.sku}` : e.sku}</span>
               <span className="text-white/60 text-sm">
-                {e.status}{e.expires_at ? ` (expires ${new Date(e.expires_at).toLocaleDateString()})` : ''}
+                {e.status ?? 'active'}
+                {e.expires_at ? ` (expires ${new Date(e.expires_at).toLocaleDateString()})` : ''}
               </span>
             </li>
           ))}
