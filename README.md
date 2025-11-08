@@ -2,6 +2,8 @@
 
 MVP React app for the Crypto Tip Jar project. Works with the separate backend (x402 + Supabase) you deployed on Vercel.
 
+The frontend talks directly to that backend (no BFF). `/login` posts to the backend's `/api/auth/siws/start` and `/finish` endpoints, so make sure your backend allow-lists your local dev origin (e.g. `http://localhost:3000` for the backend and `http://localhost:3001` or similar for the frontend).
+
 ## Quick start
 
 ```bash
@@ -10,9 +12,11 @@ cp .env.example .env.local
 pnpm dev
 ```
 
+> ⚠️ If your backend is already listening on `http://localhost:3000`, start Next on another port (e.g. `pnpm dev -- -p 3001`) and allow-list that origin in the backend.
+
 ### Required env
-- `NEXT_PUBLIC_API_BASE_URL` – e.g. `https://cryptip-backend.vercel.app`
-- `NEXT_PUBLIC_SOLANA_CLUSTER` – `mainnet-beta` (default) | `devnet` | `testnet`
+- `NEXT_PUBLIC_API_BASE_URL` – e.g. `http://localhost:3000`
+- `NEXT_PUBLIC_SOLANA_CLUSTER` – `devnet` (for local Phantom testing) | `mainnet-beta` | `testnet`
 - `NEXT_PUBLIC_SOLANA_RPC` – (optional) Helius or other RPC URL
 
 ## Features
