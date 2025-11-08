@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { apiLogout } from './siws';
 import { siwsLogin } from './siws-login';
 import type { Adapter } from '@solana/wallet-adapter-base';
 import { useSession } from './session';
+import { logout } from './auth';
 
 export function useAutoSiws() {
   const { connected, publicKey, signMessage, wallet } = useWallet();
@@ -55,7 +55,7 @@ export function useAutoSiws() {
   useEffect(() => {
     if (!connected && lastAddress.current) {
       lastAddress.current = null;
-      apiLogout()
+      logout()
         .catch((err) => {
           console.error('Failed to log out:', err);
         })
