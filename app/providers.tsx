@@ -1,19 +1,46 @@
-// app/providers.tsx
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import { clusterApiUrl } from '@solana/web3.js';
-import React from 'react';
+import { useStandardWalletAdapters } from '@solana/wallet-standard-wallet-adapter-react';
+import type { Adapter } from '@solana/wallet-adapter-base';
+import { SessionProvider } from '@/lib/session';
+import { useAutoSiws } from '@/lib/useAutoSiws';
+
+function AutoSiwsHandler() {
+  useAutoSiws();
+  return null;
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const endpoint = clusterApiUrl('mainnet-beta');
-  const wallets: any[] = []; // rely on Wallet Standard discovery
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const endpoint =
+    process.env.NEXT_PUBLIC_SOLANA_RPC ||
+    clusterApiUrl((process.env.NEXT_PUBLIC_SOLANA_CLUSTER as any) || 'mainnet-beta');
+
+  const standardAdapters = useStandardWalletAdapters([]);
+
+  const wallets = useMemo<Adapter[]>(() => [...standardAdapters], [standardAdapters]);
+
+  if (!mounted) return null;
+
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>{children}</WalletModalProvider>
+        <WalletModalProvider>
+          <SessionProvider>
+            <AutoSiwsHandler />
+            {children}
+          </SessionProvider>
+        </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
   );
