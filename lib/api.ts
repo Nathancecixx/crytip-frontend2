@@ -12,6 +12,34 @@ if (!rawBaseUrl) {
 
 export const API_BASE_URL = rawBaseUrl.replace(/\/$/, '');
 
+if (
+  typeof window !== 'undefined' &&
+  process.env.NODE_ENV !== 'production' &&
+  window.location?.origin === API_BASE_URL
+) {
+  console.warn(
+    'Warning: NEXT_PUBLIC_API_BASE_URL matches the current window origin. Did you mean to point to the API server?'
+  );
+}
+
+function applyGlobalRequestDefaults(init: RequestInit = {}): RequestInit {
+  const { headers: initHeaders, ...rest } = init;
+  const headers = new Headers(initHeaders ?? undefined);
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const origin = window.location.origin;
+    if (!headers.has('origin')) {
+      headers.set('origin', origin);
+    }
+  }
+
+  return {
+    ...rest,
+    headers,
+    credentials: 'include',
+  };
+}
+
 function isAbsoluteUrl(path: string): boolean {
   return /^https?:\/\//i.test(path);
 }
@@ -24,7 +52,7 @@ function normalizeApiPath(path: string): string {
 
 export function api(path: string, init: RequestInit = {}) {
   const url = normalizeApiPath(path);
-  return fetch(url, { ...init, credentials: 'include' });
+  return fetch(url, applyGlobalRequestDefaults(init));
 }
 
 export class ApiError extends Error {
@@ -42,17 +70,15 @@ export class ApiError extends Error {
 export type ApiFetchOptions = RequestInit & { json?: unknown };
 
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
-  const { json, headers: initHeaders, ...rest } = options;
-  const headers = new Headers(initHeaders ?? undefined);
+  const { json, ...rest } = options;
+  const init = applyGlobalRequestDefaults(rest);
+  const headers = new Headers(init.headers ?? undefined);
   if (!headers.has('Accept')) headers.set('Accept', 'application/json');
   if (json !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const init: RequestInit = {
-    ...rest,
-    headers,
-  };
+  init.headers = headers;
 
   if (json !== undefined) {
     init.body = JSON.stringify(json);
@@ -60,7 +86,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   }
 
   const target = normalizeApiPath(path);
-  const response = await fetch(target, { ...init, credentials: 'include' });
+  const response = await fetch(target, init);
   const contentType = response.headers.get('content-type') || '';
   const isJson = contentType.toLowerCase().includes('application/json');
   const raw = response.status === 204 ? '' : await response.text();
