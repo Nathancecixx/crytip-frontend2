@@ -6,7 +6,7 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import { clusterApiUrl } from '@solana/web3.js';
 import { useAutoSiws } from '@/lib/useAutoSiws';
-import { useStandardWalletAdapters } from '@solana/wallet-standard-wallet-adapter-react';
+import type { Adapter } from '@solana/wallet-adapter-base';
 
 function AutoSiwsHandler() {
   useAutoSiws();
@@ -21,18 +21,7 @@ export default function WalletKit({ children }: { children: ReactNode }) {
     process.env.NEXT_PUBLIC_SOLANA_RPC ||
     clusterApiUrl((process.env.NEXT_PUBLIC_SOLANA_CLUSTER as any) || 'mainnet-beta');
 
-  const standardWallets = useStandardWalletAdapters([]);
-  const wallets = useMemo(() => {
-    const seen = new Set<string>();
-    return standardWallets.filter((adapter) => {
-      const key = adapter.name;
-      if (seen.has(key)) {
-        return false;
-      }
-      seen.add(key);
-      return true;
-    });
-  }, [standardWallets]);
+  const wallets = useMemo<Adapter[]>(() => [], []);
 
   if (!mounted) return null;
 
