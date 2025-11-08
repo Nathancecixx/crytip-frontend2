@@ -105,7 +105,6 @@ export async function siwsLogin(
     try {
       await apiPost('/api/auth/siws/finish', {
         address,
-        message: start.message,
         nonce: start.nonce,
         signature,
       });
