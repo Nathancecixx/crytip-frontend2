@@ -1,160 +1,93 @@
+// app/login/page.tsx
 'use client';
 
-import { useCallback, useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useWallet } from '@solana/wallet-adapter-react';
 import bs58 from 'bs58';
-import { ApiError, apiGet } from '@/lib/api';
-import { siwsFinish, siwsStart } from '@/lib/siws';
-import { useSession } from '@/lib/session';
+import { siwsStart, siwsFinish, apiGet } from '@/src/lib/siws';
 
-const textEncoder = new TextEncoder();
-
-type ErrorState = { message: string; retryable?: boolean } | null;
-
-type FinishErrorBody = { error?: string; message?: string } | null;
-
-function toUint8Array(value: Uint8Array | ArrayBuffer) {
-  if (value instanceof Uint8Array) return value;
-  return new Uint8Array(value);
-}
-
-function friendlyError(code?: string, fallback?: string) {
-  switch (code) {
-    case 'nonce_invalid':
-      return 'Your sign-in request expired. Please try again.';
-    case 'signature_invalid':
-      return 'The signature was rejected. Please try again.';
-    case 'domain_mismatch':
-      return 'This sign-in request was issued for a different site. Refresh and try again.';
-    default:
-      return fallback ?? 'Failed to sign in with your wallet. Please try again.';
-  }
-}
-
-function parseApiError(error: unknown): FinishErrorBody {
-  if (error instanceof ApiError) {
-    const body = error.body;
-    if (body && typeof body === 'object') {
-      const maybe = body as { error?: unknown; message?: unknown };
-      return {
-        error: typeof maybe.error === 'string' ? maybe.error : undefined,
-        message: typeof maybe.message === 'string' ? maybe.message : undefined,
-      };
-    }
-    if (typeof body === 'string') {
-      return { message: body };
-    }
-    return { message: error.message };
-  }
-
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message;
-    return { message: typeof message === 'string' ? message : undefined };
-  }
-
-  if (typeof error === 'string') {
-    return { message: error };
-  }
-
-  return null;
-}
+const PLACEHOLDER = '<WALLET_ADDRESS>';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { refresh } = useSession();
-  const { connected, publicKey, signMessage, wallet } = useWallet();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<ErrorState>(null);
+  const { publicKey, signMessage, connect, connected } = useWallet();
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const walletName = wallet?.adapter?.name ?? 'wallet';
-
-  const handleLogin = useCallback(async () => {
-    if (busy) return;
-
-    if (!connected || !publicKey) {
-      setError({ message: 'Connect your wallet to continue.' });
-      return;
-    }
-
-    if (!signMessage) {
-      setError({ message: 'This wallet does not support message signing.' });
-      return;
-    }
-
-    setBusy(true);
+  const handleLogin = React.useCallback(async () => {
     setError(null);
-
+    setLoading(true);
     try {
-      const address = publicKey.toBase58();
-      const challenge = await siwsStart(address);
-      if (!challenge?.message || !challenge?.nonce) {
-        throw new Error('Invalid sign-in challenge.');
+      // 1) Ensure wallet is connected
+      if (!connected) {
+        await connect(); // shows wallet UI if needed
+      }
+      if (!publicKey) {
+        throw new Error('wallet_no_public_key');
+      }
+      if (!signMessage) {
+        // Some wallets do not support message signing
+        throw new Error('wallet_sign_message_unavailable');
       }
 
-      const messageBytes = textEncoder.encode(challenge.message);
-      const rawSignature = await signMessage(messageBytes);
-      const signature = bs58.encode(toUint8Array(rawSignature));
+      const address = publicKey.toBase58();
 
-      await siwsFinish({ address, signature, nonce: challenge.nonce });
+      // 2) Get challenge from backend
+      const challenge = await siwsStart();
+
+      // 3) Replace placeholder in challenge message with the actual address
+      const messageToSign = challenge.message.replace(PLACEHOLDER, address);
+
+      // 4) Sign the exact message shown (UTF-8 bytes)
+      const encoder = new TextEncoder();
+      const signatureBytes = await signMessage(encoder.encode(messageToSign));
+
+      // Prefer base58 string to match backend normalization
+      const signatureBase58 = bs58.encode(signatureBytes);
+
+      // 5) Finish SIWS on backend (this sets the session cookie)
+      await siwsFinish({
+        address,
+        signature: signatureBase58,
+        nonce: challenge.nonce,
+      });
+
+      // 6) Optional sanity check: hit an authenticated endpoint
       await apiGet('/api/me');
-      await refresh();
 
-      router.push('/dashboard');
-    } catch (err) {
-      console.error('SIWS login failed:', err);
-      const details = parseApiError(err);
-      const message = friendlyError(details?.error, details?.message);
-      setError({ message, retryable: true });
+      // 7) Navigate to your app's dashboard (adjust path if needed)
+      router.replace('/dashboard');
+    } catch (e: any) {
+      console.error('login_error', e);
+      setError(e?.message ?? 'login_failed');
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
-  }, [busy, connected, publicKey, signMessage, router, refresh]);
+  }, [connected, connect, publicKey, signMessage, router]);
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 p-6">
-      <div>
-        <h1 className="mb-2 text-2xl font-semibold">Sign in with Wallet</h1>
-        <p className="text-sm text-white/70">
-          Connect your wallet and sign the request to continue.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/40 p-4">
-        <span className="text-sm font-medium text-white/80">Wallet</span>
-        <WalletMultiButton className="!rounded-xl !bg-indigo-600 hover:!bg-indigo-500" />
-        <span className="text-xs text-white/60">
-          Connected wallet: {connected && publicKey ? walletName : 'none'}
-        </span>
-      </div>
-
-      {error && (
-        <div className="space-y-3 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
-          <p>{error.message}</p>
-          {error.retryable && (
-            <button
-              type="button"
-              className="rounded-lg bg-red-500/20 px-3 py-1 text-red-100 transition hover:bg-red-500/30"
-              onClick={() => {
-                setError(null);
-                handleLogin();
-              }}
-              disabled={busy}
-            >
-              Try again
-            </button>
-          )}
-        </div>
-      )}
+    <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8">
+      <h1 className="text-2xl font-semibold">Sign in with your Solana wallet</h1>
 
       <button
+        disabled={loading}
         onClick={handleLogin}
-        disabled={busy || !connected || !publicKey || !signMessage}
-        className="rounded-xl bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-xl px-5 py-3 font-medium shadow hover:opacity-90 disabled:opacity-60 border"
       >
-        {busy ? 'Signing…' : 'Sign in'}
+        {loading ? 'Signing…' : 'Sign in'}
       </button>
-    </div>
+
+      {error && (
+        <p className="text-sm text-red-500 max-w-[520px] text-center">
+          {error}
+        </p>
+      )}
+
+      <p className="text-xs opacity-70 max-w-[520px] text-center">
+        By continuing you agree to sign a message to prove ownership of your wallet.
+        No funds are moved.
+      </p>
+    </main>
   );
 }

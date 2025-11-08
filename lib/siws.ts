@@ -1,57 +1,61 @@
-import { apiPost } from './api';
+// src/lib/siws.ts
+import { BACKEND_ORIGIN } from './config';
 
 export type SiwsStartResponse = {
+  nonce: string;
   message: string;
-  nonce: string;
+  expiresAt?: string;
 };
 
-type SiwsFinishInput = {
+export async function siwsStart(): Promise<SiwsStartResponse> {
+  const res = await fetch(`${BACKEND_ORIGIN}/api/auth/siws/start`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include', // keep cookies flowing even on start
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`siws_start_failed: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
+export async function siwsFinish(payload: {
   address: string;
-  signature: string;
+  signature?: string;           // base58
+  signatureBytes?: number[];    // raw bytes
+  signatureBase64?: string;     // base64
   nonce: string;
-};
+}) {
+  const res = await fetch(`${BACKEND_ORIGIN}/api/auth/siws/finish`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include', // REQUIRED so the Set-Cookie from the server is accepted
+  });
 
-function requireWindowHost(): string {
-  if (typeof window === 'undefined' || !window.location?.host) {
-    throw new Error('Sign in with wallet is only available in the browser.');
-  }
-  return window.location.host;
-}
-
-function appendDomain(payload: Record<string, unknown>) {
-  try {
-    const domain = requireWindowHost();
-    return { ...payload, domain };
-  } catch {
-    return payload;
-  }
-}
-
-export async function siwsStart(address: string): Promise<SiwsStartResponse> {
-  if (!address) {
-    throw new Error('Wallet address is required to start SIWS.');
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const j = await res.json();
+      detail = JSON.stringify(j);
+    } catch {
+      detail = await res.text().catch(() => '');
+    }
+    throw new Error(`siws_finish_failed: ${res.status} ${detail}`);
   }
 
-  return apiPost<SiwsStartResponse>(
-    '/api/auth/siws/start',
-    appendDomain({ address }),
-    { headers: { 'X-CSRF': '1' } }
-  );
+  return res.json();
 }
 
-export async function siwsFinish(input: SiwsFinishInput): Promise<void> {
-  const { address, signature, nonce } = input;
-  if (!address || !signature || !nonce) {
-    throw new Error('Address, signature and nonce are required to finish SIWS.');
+export async function apiGet<T = unknown>(path: string): Promise<T> {
+  const res = await fetch(`${BACKEND_ORIGIN}${path}`, {
+    method: 'GET',
+    credentials: 'include', // send the session cookie with every API call
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`api_get_failed ${path}: ${res.status} ${text}`);
   }
-
-  await apiPost(
-    '/api/auth/siws/finish',
-    appendDomain({ address, signature, nonce }),
-    { headers: { 'X-CSRF': '1' } }
-  );
-}
-
-export async function apiLogout() {
-  await apiPost('/api/auth/logout', {}, { headers: { 'X-CSRF': '1' } }).catch(() => {});
+  return res.json() as Promise<T>;
 }
