@@ -1,18 +1,18 @@
 // app/login/page.tsx
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useWallet, useWalletModal } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { PublicKey } from '@solana/web3.js';
 import { siwsFinish, siwsStart } from '@/lib/siws';
 import { useSession } from '@/lib/session';
 
 function toBase64(u8: Uint8Array) {
-  if (typeof window === 'undefined') return '';
   let s = '';
-  u8.forEach((b) => (s += String.fromCharCode(b)));
-  return btoa(s);
+  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+  return typeof window !== 'undefined' ? btoa(s) : '';
 }
 
 export default function LoginPage() {
@@ -35,25 +35,30 @@ export default function LoginPage() {
     setErr(null);
     try {
       if (!connected) {
-        setVisible(true);
+        setVisible(true); // open wallet modal
         return;
       }
       if (!publicKey) throw new Error('No wallet public key');
       if (!signMessage) throw new Error('Wallet does not support message signing');
 
       setBusy(true);
+
+      // 1) Start SIWS
       const { nonce, message } = await siwsStart();
 
+      // 2) Sign message
       const msgBytes = new TextEncoder().encode(message);
       const sig = await signMessage(msgBytes);
       const signatureBase64 = toBase64(sig);
 
+      // 3) Finish SIWS
       await siwsFinish({
         address: new PublicKey(publicKey).toBase58(),
         nonce,
         signatureBase64,
       });
 
+      // 4) Go to next page (middleware will admit you if cookie set)
       router.replace(next);
     } catch (e: any) {
       setErr(e?.message || 'Login failed');
@@ -68,12 +73,8 @@ export default function LoginPage() {
       <p className="text-white/70 mb-6">
         Connect your wallet and sign a message to authenticate. No funds are moved.
       </p>
-      <button
-        onClick={doLogin}
-        disabled={busy}
-        className="btn disabled:opacity-60"
-      >
-        {busy ? 'Signing…' : (connected ? 'Sign In' : 'Connect Wallet')}
+      <button onClick={doLogin} disabled={busy} className="btn disabled:opacity-60">
+        {busy ? 'Signing…' : connected ? 'Sign In' : 'Connect Wallet'}
       </button>
       {err && (
         <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
