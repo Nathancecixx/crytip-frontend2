@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   const handleLogin = React.useCallback(async () => {
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {
@@ -26,7 +27,8 @@ export default function LoginPage() {
         } catch (err: any) {
           if (err?.name === 'WalletNotSelectedError') {
             setVisible(true);
-            return; // wait for user to pick wallet, then click again
+            setLoading(false);
+            return;
           }
           throw err;
         }
@@ -44,7 +46,7 @@ export default function LoginPage() {
 
       await siwsFinish({ address, signature: signatureBase58, nonce: challenge.nonce });
 
-      // Session sanity check
+      // Make sure cookie-based session is live on backend
       await apiGet('/api/me');
 
       router.replace('/dashboard');
@@ -54,7 +56,7 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  }, [connected, connect, publicKey, signMessage, setVisible, router]);
+  }, [connected, connect, publicKey, signMessage, setVisible, router, loading]);
 
   return (
     <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8">
