@@ -111,7 +111,7 @@ export default function Home() {
             <div className="flex items-center gap-3 mb-5">
               <div className="relative h-9 w-9 rounded-xl overflow-hidden ring-1 ring-white/10">
                 <Image
-                  src="/content/CrypTipLogo.png"
+                  src="/images/CrypTipLogo.png"
                   alt="CrypTip"
                   fill
                   sizes="36px"
