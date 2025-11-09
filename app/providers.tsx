@@ -31,7 +31,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           <SessionProvider>
-            <AutoSiwsHandler />
             {children}
           </SessionProvider>
         </WalletModalProvider>
