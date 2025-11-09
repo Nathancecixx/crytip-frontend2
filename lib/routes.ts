@@ -1,15 +1,10 @@
-import type { Route } from 'next';
-
-export const ALLOWED_NEXT_ROUTES: ReadonlyArray<Route> = ['/dashboard', '/editor'];
-
-export const DEFAULT_AFTER_LOGIN: Route = '/dashboard';
-
-export function resolveNextRoute(nextParam: string | null | undefined): Route {
-  if (!nextParam) return DEFAULT_AFTER_LOGIN;
-  return ALLOWED_NEXT_ROUTES.find((route) => route === nextParam) ?? DEFAULT_AFTER_LOGIN;
-}
-
-export function isAllowedNextRoute(pathname: string | null | undefined): pathname is Route {
-  if (!pathname) return false;
-  return ALLOWED_NEXT_ROUTES.some((route) => route === pathname);
+// lib/routes.ts
+export function isAllowedNextRoute(path: string): boolean {
+  // Allow only in-app paths (no protocol, no external)
+  if (!path.startsWith('/')) return false;
+  // Deny auth routes as destinations:
+  const banned = ['/login', '/logout'];
+  if (banned.includes(path)) return false;
+  // Optionally restrict to known pages:
+  return true;
 }

@@ -1,9 +1,6 @@
 // lib/siws.ts
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!;
-if (!API_BASE) {
-  // eslint-disable-next-line no-console
-  console.warn('NEXT_PUBLIC_API_BASE_URL is not set; auth calls will fail.');
-}
+if (!API_BASE) console.warn('NEXT_PUBLIC_API_BASE_URL is not set; auth calls will fail.');
 
 async function asJson<T>(res: Response): Promise<T> {
   const text = await res.text();
@@ -11,38 +8,24 @@ async function asJson<T>(res: Response): Promise<T> {
 }
 
 export async function siwsStart(): Promise<{ nonce: string; message: string; createdAt?: string; expiresAt?: string; }> {
-  const res = await fetch(`${API_BASE}/api/auth/siws/start`, {
-    method: 'POST',
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    const body = await asJson<any>(res);
-    throw new Error(`siws_start_failed: ${res.status} ${JSON.stringify(body)}`);
-  }
+  const res = await fetch(`${API_BASE}/api/auth/siws/start`, { method: 'POST', credentials: 'include' });
+  if (!res.ok) throw new Error(`siws_start_failed: ${res.status} ${JSON.stringify(await asJson(res))}`);
   return res.json();
 }
 
-export async function siwsFinish(body: { address: string; nonce: string; signature?: string; signatureBase64?: string; signatureBytes?: number[]; }) {
+export async function siwsFinish(body: { address: string; nonce: string; signatureBase64?: string; signature?: string; signatureBytes?: number[]; }) {
   const res = await fetch(`${API_BASE}/api/auth/siws/finish`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const payload = await asJson<any>(res);
-    throw new Error(`siws_finish_failed: ${res.status} ${JSON.stringify(payload)}`);
-  }
+  if (!res.ok) throw new Error(`siws_finish_failed: ${res.status} ${JSON.stringify(await asJson(res))}`);
   return res.json();
 }
 
 export async function apiGet<T = any>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    const payload = await asJson<any>(res);
-    throw new Error(`api_get_failed: ${res.status} ${JSON.stringify(payload)}`);
-  }
+  const res = await fetch(`${API_BASE}${path}`, { credentials: 'include' });
+  if (!res.ok) throw new Error(`api_get_failed: ${res.status} ${JSON.stringify(await asJson(res))}`);
   return res.json();
 }

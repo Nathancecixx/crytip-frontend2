@@ -1,77 +1,85 @@
+// app/login/page.tsx
 'use client';
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import bs58 from 'bs58';
-import { siwsStart, siwsFinish, apiGet } from '@/lib/siws';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useWallet, useWalletModal } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { siwsFinish, siwsStart } from '@/lib/siws';
+import { useSession } from '@/lib/session';
 
-const PLACEHOLDER = '<WALLET_ADDRESS>';
+function toBase64(u8: Uint8Array) {
+  if (typeof window === 'undefined') return '';
+  let s = '';
+  u8.forEach((b) => (s += String.fromCharCode(b)));
+  return btoa(s);
+}
 
 export default function LoginPage() {
   const router = useRouter();
-  const { publicKey, signMessage, connect, connected } = useWallet();
-  const { setVisible } = useWalletModal();
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const params = useSearchParams();
+  const next = params.get('next') || '/dashboard';
+  const { status } = useSession();
 
-  const handleLogin = React.useCallback(async () => {
-    if (loading) return;
-    setError(null);
-    setLoading(true);
+  const { publicKey, signMessage, connected } = useWallet();
+  const { setVisible } = useWalletModal();
+
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'authenticated') router.replace(next);
+  }, [status, router, next]);
+
+  const doLogin = useCallback(async () => {
+    setErr(null);
     try {
       if (!connected) {
-        try {
-          await connect();
-        } catch (err: any) {
-          if (err?.name === 'WalletNotSelectedError') {
-            setVisible(true);
-            setLoading(false);
-            return;
-          }
-          throw err;
-        }
+        setVisible(true);
+        return;
       }
-      if (!publicKey) throw new Error('wallet_no_public_key');
-      if (!signMessage) throw new Error('wallet_sign_message_unavailable');
+      if (!publicKey) throw new Error('No wallet public key');
+      if (!signMessage) throw new Error('Wallet does not support message signing');
 
-      const address = publicKey.toBase58();
+      setBusy(true);
+      const { nonce, message } = await siwsStart();
 
-      const challenge = await siwsStart();
-      const messageToSign = challenge.message.replace(PLACEHOLDER, address);
+      const msgBytes = new TextEncoder().encode(message);
+      const sig = await signMessage(msgBytes);
+      const signatureBase64 = toBase64(sig);
 
-      const signatureBytes = await signMessage(new TextEncoder().encode(messageToSign));
-      const signatureBase58 = bs58.encode(signatureBytes);
+      await siwsFinish({
+        address: new PublicKey(publicKey).toBase58(),
+        nonce,
+        signatureBase64,
+      });
 
-      await siwsFinish({ address, signature: signatureBase58, nonce: challenge.nonce });
-
-      // Make sure cookie-based session is live on backend
-      await apiGet('/api/me');
-
-      router.replace('/dashboard');
+      router.replace(next);
     } catch (e: any) {
-      console.error('login_error', e);
-      setError(e?.message ?? 'login_failed');
+      setErr(e?.message || 'Login failed');
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  }, [connected, connect, publicKey, signMessage, setVisible, router, loading]);
+  }, [connected, publicKey, signMessage, setVisible, router, next]);
 
   return (
-    <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-2xl font-semibold">Sign in with your Solana wallet</h1>
-      <button
-        disabled={loading}
-        onClick={handleLogin}
-        className="rounded-xl px-5 py-3 font-medium shadow hover:opacity-90 disabled:opacity-60 border"
-      >
-        {loading ? 'Signing…' : 'Sign in'}
-      </button>
-      {error && <p className="text-sm text-red-500 max-w-[520px] text-center">{error}</p>}
-      <p className="text-xs opacity-70 max-w-[520px] text-center">
-        You’ll sign a message to prove wallet ownership. No funds move.
+    <div className="max-w-md mx-auto">
+      <h1 className="text-2xl font-semibold mb-3">Sign in with Solana</h1>
+      <p className="text-white/70 mb-6">
+        Connect your wallet and sign a message to authenticate. No funds are moved.
       </p>
-    </main>
+      <button
+        onClick={doLogin}
+        disabled={busy}
+        className="btn disabled:opacity-60"
+      >
+        {busy ? 'Signing…' : (connected ? 'Sign In' : 'Connect Wallet')}
+      </button>
+      {err && (
+        <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+          {err}
+        </div>
+      )}
+    </div>
   );
 }

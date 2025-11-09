@@ -1,21 +1,19 @@
+// components/ProtectedRoute.tsx
 'use client';
 
 import { PropsWithChildren, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import { useSession } from '@/lib/session';
 import { isAllowedNextRoute } from '@/lib/routes';
 
-type ProtectedRouteProps = PropsWithChildren<{
-  redirectTo?: Route;
-  loadingLabel?: string;
-}>;
+type Props = PropsWithChildren<{ redirectTo?: Route; loadingLabel?: string }>;
 
 export default function ProtectedRoute({
   redirectTo = '/login',
-  loadingLabel = 'Loading…',
+  loadingLabel = 'Checking your session…',
   children,
-}: ProtectedRouteProps) {
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const { status, initializing, error } = useSession();
@@ -24,19 +22,14 @@ export default function ProtectedRoute({
     if (initializing) return;
     if (status === 'unauthenticated') {
       const params = new URLSearchParams();
-      if (pathname && pathname !== '/' && isAllowedNextRoute(pathname)) {
-        params.set('next', pathname);
-      }
-      const target: Route = params.size > 0 ? (`${redirectTo}?${params.toString()}` as Route) : redirectTo;
+      if (pathname && isAllowedNextRoute(pathname)) params.set('next', pathname);
+      const target = (params.size ? `${redirectTo}?${params}` : redirectTo) as Route;
       router.replace(target);
     }
   }, [status, initializing, redirectTo, router, pathname]);
 
-  if (status === 'authenticated') {
-    return <>{children}</>;
-  }
-
-  if (status === 'error') {
+  if (status === 'authenticated') return <>{children}</>;
+  if (status === 'error')
     return (
       <div className="p-6">
         <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -44,11 +37,6 @@ export default function ProtectedRoute({
         </div>
       </div>
     );
-  }
 
-  return (
-    <div className="p-6 text-white/70">
-      {loadingLabel}
-    </div>
-  );
+  return <div className="p-6 text-white/70">{loadingLabel}</div>;
 }
