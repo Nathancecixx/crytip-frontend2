@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import clsx from 'clsx';
+import logo from "content/CryptipLogo"
 
 // Keep links only to routes that exist in your app.
 const links: { href: Route; label: string }[] = [
@@ -97,7 +98,7 @@ export default function NavBar() {
         <Link href="/" className="flex items-center gap-2">
           <div className="relative h-7 w-7 rounded-lg overflow-hidden ring-1 ring-white/10">
             <Image
-              src="/content/CryptipLogo.png"
+              src="/content/CrypTipLogo.png"
               alt="CrypTip"
               fill
               sizes="28px"
