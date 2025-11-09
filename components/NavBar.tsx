@@ -8,7 +8,6 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import clsx from 'clsx';
-import logo from "content/CryptipLogo"
 
 // Keep links only to routes that exist in your app.
 const links: { href: Route; label: string }[] = [
