@@ -97,7 +97,7 @@ export default function NavBar() {
         <Link href="/" className="flex items-center gap-2">
           <div className="relative h-7 w-7 rounded-lg overflow-hidden ring-1 ring-white/10">
             <Image
-              src="/public/images/CrypTipLogo.png"
+              src="images/CrypTipLogo.png"
               alt="CrypTip"
               fill
               sizes="28px"
