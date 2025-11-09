@@ -42,25 +42,26 @@ export default function LoginPage() {
   const doLogin = useCallback(async () => {
     setErr(null);
     try {
-      if (!connected) {
-        setVisible(true);
-        return;
-      }
+      if (!connected) { setVisible(true); return; }
       if (!publicKey) throw new Error('No wallet public key');
       if (!signMessage) throw new Error('Wallet does not support message signing');
 
       setBusy(true);
 
-      const { nonce, message } = await siwsStart();
+      // 1) Start SIWS — server returns a template with <WALLET_ADDRESS>
+      const { nonce, message: template } = await siwsStart();
+
+      // 2) Inject the actual address into the message BEFORE signing
+      const address58 = new PublicKey(publicKey).toBase58();
+      const message = template.replace('<WALLET_ADDRESS>', address58);
+
+      // 3) Sign the final message
       const msgBytes = new TextEncoder().encode(message);
       const sig = await signMessage(msgBytes);
       const signatureBase64 = toBase64(sig);
 
-      await siwsFinish({
-        address: new PublicKey(publicKey).toBase58(),
-        nonce,
-        signatureBase64,
-      });
+      // 4) Finish SIWS
+      await siwsFinish({ address: address58, nonce, signatureBase64 });
 
       router.replace(safeNext);
     } catch (e: any) {
@@ -69,6 +70,7 @@ export default function LoginPage() {
       setBusy(false);
     }
   }, [connected, publicKey, signMessage, setVisible, router, safeNext]);
+
 
   return (
     <div className="max-w-md mx-auto">

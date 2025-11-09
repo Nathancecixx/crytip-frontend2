@@ -12,9 +12,8 @@ const links: { href: Route; label: string }[] = [
   { href: '/', label: 'Home' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/editor', label: 'Editor' },
-  // Add these ONLY if pages exist:
-  // { href: '/store', label: 'Store' },
-  // { href: '/docs', label: 'Docs' },
+  { href: '/store', label: 'Store' },
+  { href: '/docs', label: 'Docs' },
 ];
 
 function NavLink({ href, label }: { href: Route; label: string }) {
