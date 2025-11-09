@@ -1,13 +1,15 @@
 // app/login/page.tsx
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import type { Route } from 'next';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { PublicKey } from '@solana/web3.js';
 import { siwsFinish, siwsStart } from '@/lib/siws';
 import { useSession } from '@/lib/session';
+import { isAllowedNextRoute } from '@/lib/routes';
 
 function toBase64(u8: Uint8Array) {
   let s = '';
@@ -18,9 +20,15 @@ function toBase64(u8: Uint8Array) {
 export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get('next') || '/dashboard';
-  const { status } = useSession();
+  const rawNext = params.get('next');
 
+  // Sanitize + satisfy typedRoutes
+  const safeNext: Route = useMemo(() => {
+    if (rawNext && isAllowedNextRoute(rawNext)) return rawNext as Route;
+    return '/dashboard';
+  }, [rawNext]);
+
+  const { status } = useSession();
   const { publicKey, signMessage, connected } = useWallet();
   const { setVisible } = useWalletModal();
 
@@ -28,14 +36,14 @@ export default function LoginPage() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated') router.replace(next);
-  }, [status, router, next]);
+    if (status === 'authenticated') router.replace(safeNext);
+  }, [status, router, safeNext]);
 
   const doLogin = useCallback(async () => {
     setErr(null);
     try {
       if (!connected) {
-        setVisible(true); // open wallet modal
+        setVisible(true);
         return;
       }
       if (!publicKey) throw new Error('No wallet public key');
@@ -43,29 +51,24 @@ export default function LoginPage() {
 
       setBusy(true);
 
-      // 1) Start SIWS
       const { nonce, message } = await siwsStart();
-
-      // 2) Sign message
       const msgBytes = new TextEncoder().encode(message);
       const sig = await signMessage(msgBytes);
       const signatureBase64 = toBase64(sig);
 
-      // 3) Finish SIWS
       await siwsFinish({
         address: new PublicKey(publicKey).toBase58(),
         nonce,
         signatureBase64,
       });
 
-      // 4) Go to next page (middleware will admit you if cookie set)
-      router.replace(next);
+      router.replace(safeNext);
     } catch (e: any) {
       setErr(e?.message || 'Login failed');
     } finally {
       setBusy(false);
     }
-  }, [connected, publicKey, signMessage, setVisible, router, next]);
+  }, [connected, publicKey, signMessage, setVisible, router, safeNext]);
 
   return (
     <div className="max-w-md mx-auto">
