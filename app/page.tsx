@@ -18,13 +18,18 @@ function Section({
   return (
     <section id={id} className={`relative py-20 sm:py-28 ${className}`}>
       <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-        {/* Subtle Solana aurora blobs */}
-        <div className="absolute -top-20 -left-24 h-64 w-64 rounded-full blur-3xl opacity-30"
-             style={{ background: 'radial-gradient(60% 60% at 50% 50%, #9945FF66 0%, transparent 70%)', animation: 'float1 16s ease-in-out infinite' }} />
-        <div className="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full blur-3xl opacity-25"
-             style={{ background: 'radial-gradient(60% 60% at 50% 50%, #00FFA366 0%, transparent 70%)', animation: 'float2 18s ease-in-out infinite 1.2s' }} />
-        <div className="absolute -top-16 right-0 h-72 w-96 rounded-full blur-3xl opacity-25"
-             style={{ background: 'radial-gradient(60% 60% at 50% 50%, #14F19566 0%, transparent 75%)', animation: 'float1 20s ease-in-out infinite 0.6s' }} />
+        <div
+          className="absolute -top-20 -left-24 h-64 w-64 rounded-full blur-3xl opacity-30 animate-float1"
+          style={{ background: 'radial-gradient(60% 60% at 50% 50%, #9945FF66 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full blur-3xl opacity-25 animate-float2"
+          style={{ background: 'radial-gradient(60% 60% at 50% 50%, #00FFA366 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute -top-16 right-0 h-72 w-96 rounded-full blur-3xl opacity-25 animate-float1"
+          style={{ background: 'radial-gradient(60% 60% at 50% 50%, #14F19566 0%, transparent 75%)' }}
+        />
       </div>
 
       <div className="max-w-6xl mx-auto px-4">
@@ -55,13 +60,11 @@ function FeatureCard({
     <div className="group relative rounded-2xl border border-white/10 bg-white/5 p-5 overflow-hidden">
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-[1px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"
+        className="pointer-events-none absolute -inset-[1px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity animate-beam-fast blur-[10px]"
         style={{
           background:
             'linear-gradient(90deg,#9945FF,#14F195,#00FFA3,#9945FF)',
           backgroundSize: '200% 100%',
-          filter: 'blur(10px)',
-          animation: 'beam 12s linear infinite',
         }}
       />
       <div className="relative">
@@ -91,22 +94,16 @@ export default function Home() {
       {/* Top animated 1px beam */}
       <div
         aria-hidden
-        className="h-px w-full"
-        style={{
-          background:
-            'linear-gradient(90deg,#0000,#9945FF,#14F195,#00FFA3,#9945FF,#0000)',
-          backgroundSize: '300% 100%',
-          animation: 'beam 18s linear infinite',
-          opacity: 0.35,
-        }}
+        className="h-px w-full animate-beam opacity-35 bg-[linear-gradient(90deg,#0000,#9945FF,#14F195,#00FFA3,#9945FF,#0000)] bg-[length:300%_100%]"
       />
 
       {/* HERO */}
       <section className="relative pt-20 sm:pt-28 pb-16 sm:pb-24">
         <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-          {/* Large center glow */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 h-[28rem] w-[28rem] rounded-full blur-3xl opacity-30"
-               style={{ background: 'radial-gradient(50% 50% at 50% 50%, #9945FF55 0%, transparent 70%)', animation: 'float1 22s ease-in-out infinite' }} />
+          <div
+            className="absolute top-1/4 left-1/2 -translate-x-1/2 h-[28rem] w-[28rem] rounded-full blur-3xl opacity-30 animate-float1"
+            style={{ background: 'radial-gradient(50% 50% at 50% 50%, #9945FF55 0%, transparent 70%)' }}
+          />
         </div>
 
         <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-10 items-center">
@@ -169,13 +166,12 @@ export default function Home() {
 
           {/* Demo mock */}
           <div className="relative">
-            <div className="absolute -inset-4 -z-10 rounded-3xl opacity-40"
-                 style={{
-                   background: 'linear-gradient(90deg,#9945FF,#14F195,#00FFA3,#9945FF)',
-                   backgroundSize: '200% 100%',
-                   filter: 'blur(18px)',
-                   animation: 'beam 10s linear infinite',
-                 }}
+            <div
+              className="absolute -inset-4 -z-10 rounded-3xl opacity-40 animate-beam-fast blur-[18px]"
+              style={{
+                background: 'linear-gradient(90deg,#9945FF,#14F195,#00FFA3,#9945FF)',
+                backgroundSize: '200% 100%',
+              }}
             />
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl">
               <div className="rounded-2xl bg-black/40 border border-white/10 p-5">
@@ -228,8 +224,7 @@ export default function Home() {
             title="Blazing-fast, low fees"
             icon={<svg width="18" height="18" viewBox="0 0 24 24" className="text-[#00FFA3]"><path d="M13 3l-2 6h6l-6 12 2-8H7L13 3z" fill="currentColor"/></svg>}
           >
-            Solana throughput and finality make tips instant and affordable—no
-            waiting, no sticker shock.
+            Solana throughput and finality make tips instant and affordable—no waiting, no sticker shock.
           </FeatureCard>
           <FeatureCard
             title="Non-custodial by design"
@@ -241,22 +236,19 @@ export default function Home() {
             title="x402 upgrades"
             icon={<svg width="18" height="18" viewBox="0 0 24 24" className="text-[#9945FF]"><path d="M12 2l3 7h7l-5.5 4 2 7-6.5-4-6.5 4 2-7L2 9h7l3-7z" fill="currentColor"/></svg>}
           >
-            Unlock vanity slugs, custom domains, and premium packs through
-            x402—purchases are verifiable, on-chain entitlements.
+            Unlock vanity slugs, custom domains, and premium packs through x402—purchases are verifiable, on-chain entitlements.
           </FeatureCard>
           <FeatureCard
             title="Token-2022 licenses"
             icon={<svg width="18" height="18" viewBox="0 0 24 24" className="text-[#00FFA3]"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>}
           >
-            Template packs ship as non-transferable Token-2022 licenses. Your
-            editor reads licenses directly.
+            Template packs ship as non-transferable Token-2022 licenses. Your editor reads licenses directly.
           </FeatureCard>
           <FeatureCard
             title="NFT visual add-ons"
             icon={<svg width="18" height="18" viewBox="0 0 24 24" className="text-[#14F195]"><rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor"/></svg>}
           >
-            Collection-verified NFTs grant special visual effects and badges,
-            rendering right on your page.
+            Collection-verified NFTs grant special visual effects and badges, rendering right on your page.
           </FeatureCard>
           <FeatureCard
             title="Custom domains"
@@ -299,13 +291,12 @@ export default function Home() {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Showcase A */}
           <div className="relative rounded-3xl border border-white/10 bg-white/5 p-5">
-            <div className="absolute -inset-2 -z-10 rounded-3xl opacity-30"
-                 style={{
-                   background: 'linear-gradient(90deg,#9945FF,#14F195,#00FFA3,#9945FF)',
-                   backgroundSize: '200% 100%',
-                   filter: 'blur(12px)',
-                   animation: 'beam 14s linear infinite',
-                 }}
+            <div
+              className="absolute -inset-2 -z-10 rounded-3xl opacity-30 animate-beam blur-[12px]"
+              style={{
+                background: 'linear-gradient(90deg,#9945FF,#14F195,#00FFA3,#9945FF)',
+                backgroundSize: '200% 100%',
+              }}
             />
             <div className="rounded-2xl bg-black/40 border border-white/10 p-5">
               <div className="flex items-center gap-3">
@@ -377,13 +368,11 @@ export default function Home() {
           <div className="relative rounded-2xl border border-white/10 bg-white/5 p-6">
             <div
               aria-hidden
-              className="pointer-events-none absolute -inset-[1px] rounded-2xl opacity-40"
+              className="pointer-events-none absolute -inset-[1px] rounded-2xl opacity-40 animate-beam blur-[10px]"
               style={{
                 background:
                   'linear-gradient(90deg,#9945FF,#14F195,#00FFA3,#9945FF)',
                 backgroundSize: '200% 100%',
-                filter: 'blur(10px)',
-                animation: 'beam 12s linear infinite',
               }}
             />
             <div className="relative">
@@ -449,22 +438,6 @@ export default function Home() {
             <Link href="/login" className="rounded-lg border border-white/15 px-3 py-1.5 hover:bg-white/10 transition">Log in</Link>
           </nav>
         </div>
-
-        {/* Scoped animations */}
-        <style jsx>{`
-          @keyframes beam {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 200% 50%; }
-          }
-          @keyframes float1 {
-            0%, 100% { transform: translate3d(0,0,0) scale(1); }
-            50% { transform: translate3d(10px,6px,0) scale(1.05); }
-          }
-          @keyframes float2 {
-            0%, 100% { transform: translate3d(0,0,0) scale(1); }
-            50% { transform: translate3d(-12px,-8px,0) scale(1.06); }
-          }
-        `}</style>
       </footer>
     </main>
   );
