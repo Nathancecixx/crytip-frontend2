@@ -8,12 +8,6 @@ import { clusterApiUrl } from '@solana/web3.js';
 import { useStandardWalletAdapters } from '@solana/wallet-standard-wallet-adapter-react';
 import type { Adapter } from '@solana/wallet-adapter-base';
 import { SessionProvider } from '@/lib/session';
-import { useAutoSiws } from '@/lib/useAutoSiws';
-
-function AutoSiwsHandler() {
-  useAutoSiws();
-  return null;
-}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
